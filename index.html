@@ -2638,19 +2638,29 @@ function renderResults(result, ranked, pct) {
 
   // Insights
   const insightsGrid = document.getElementById('insights-grid');
+  const topAnswers = (result.insights && result.insights.topAnswers) ? result.insights.topAnswers : [];
+  const strong = (result.insights && result.insights.strong) ? result.insights.strong : [];
   insightsGrid.innerHTML = `
     <div class="insight-card">
       <h4 class="h-ext">Pontos fortes detectados</h4>
       <ul class="insight-list">
-        ${result.insights.strong.map(s => `<li>${s}</li>`).join('')}
+        ${strong.map(s => `<li>${s}</li>`).join('')}
       </ul>
     </div>
     <div class="insight-card">
-      <h4 class="h-sugg">Sugestões de fortalecimento</h4>
+      <h4 class="h-pes">Aspectos com maior pontuação</h4>
       <ul class="insight-list">
-        ${result.insights.suggestions.map(s => `<li>${s}</li>`).join('')}
+        ${topAnswers.length > 0
+          ? topAnswers.map(q => `<li>${q.text} <strong>(${q.val}/10)</strong></li>`).join('')
+          : '<li>Respostas distribuídas de forma equilibrada.</li>'}
       </ul>
     </div>`;
+
+  // Relatório, impacto e sugestões
+  setTimeout(() => {
+    try { renderReport(result); } catch(e) { console.warn('renderReport:', e); }
+    try { renderDeepResults(result, ranked, pct); } catch(e) { console.warn('renderDeepResults:', e); }
+  }, 120);
 }
 
 function buildInterpretationText(type, ranked, pct) {
@@ -2846,7 +2856,7 @@ Pesquisa:  ${pct.pes}%
 Inovacao:  ${pct.ino}%
 
 Pontos fortes: ${a.insights.strong.join(', ')}
-Sugestões: ${a.insights.suggestions.join(', ')}`;
+Sugestões: ${(a.insights.suggestions || a.insights.topAnswers || []).map(s => typeof s === 'string' ? s : s.text).join(', ')}`;
 
   navigator.clipboard.writeText(text)
     .then(() => showToast('Resultado copiado para a área de transferência.'))
