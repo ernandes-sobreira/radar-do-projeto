@@ -966,6 +966,198 @@ input[type="range"]::-moz-range-thumb {
 .pill-pes { background: var(--pes-light); color: var(--pes); }
 .pill-ino { background: var(--ino-light); color: var(--ino); }
 .pill-hybrid { background: #f0eef8; color: #6c3fba; }
+
+/* CHECKBOX GRID */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-700);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-200);
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--white);
+  user-select: none;
+}
+
+.check-item:hover { border-color: var(--accent); background: var(--pes-light); }
+
+.check-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pes);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.check-item:has(input:checked) {
+  border-color: var(--pes);
+  background: var(--pes-light);
+  color: var(--pes);
+  font-weight: 600;
+}
+
+/* IMPACT METER */
+.impact-section {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.impact-section h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.impact-section p {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-bottom: 16px;
+}
+
+.impact-products-list {
+  display: grid;
+  gap: 10px;
+}
+
+.impact-product-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.impact-product-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--gray-700);
+}
+
+.impact-score-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.impact-bar {
+  width: 80px;
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.impact-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* REPORT SECTION */
+.report-section {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.report-section h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin-bottom: 16px;
+  color: var(--gray-800);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.report-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.report-tag {
+  background: var(--pes-light);
+  color: var(--pes);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.report-tag.green { background: var(--ext-light); color: var(--ext); }
+.report-tag.orange { background: var(--ino-light); color: var(--ino); }
+
+.devolutiva-box {
+  background: var(--ext-light);
+  border-left: 4px solid var(--ext);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--gray-700);
+  line-height: 1.7;
+}
+
+.suggestions-ext {
+  background: #f0faf5;
+  border: 1px solid #b7e4ce;
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+}
+
+.suggestions-ext h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ext);
+  margin-bottom: 10px;
+}
+
+.suggestions-ext ul {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.suggestions-ext ul li {
+  font-size: 13px;
+  color: var(--gray-600);
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.suggestions-ext ul li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--ext);
+  font-weight: 700;
+}
+
+@media (max-width: 540px) {
+  .checkbox-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 
@@ -1053,9 +1245,11 @@ input[type="range"]::-moz-range-thumb {
 
     <!-- STEP 0: Project Info -->
     <div id="step-0" class="form-step">
-      <div class="card">
-        <h3 class="section-heading" style="margin-bottom:4px">Informações do Projeto</h3>
-        <p class="section-sub">Preencha os dados básicos antes de iniciar a avaliação.</p>
+
+      <!-- Bloco 1: Dados básicos -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 class="section-heading" style="margin-bottom:4px">Identificação do Projeto</h3>
+        <p class="section-sub">Dados básicos para gerar o relatório final.</p>
         <div class="project-info-grid">
           <div class="field-wrap">
             <label for="proj-title">Título do projeto <span style="color:#c00">*</span></label>
@@ -1063,18 +1257,86 @@ input[type="range"]::-moz-range-thumb {
           </div>
           <div class="field-wrap">
             <label for="proj-author">Nome do responsável (opcional)</label>
-            <input type="text" id="proj-author" class="input-field" placeholder="Seu nome">
+            <input type="text" id="proj-author" class="input-field" placeholder="Seu nome completo">
           </div>
           <div class="field-wrap">
             <label for="proj-area">Área temática (opcional)</label>
-            <input type="text" id="proj-area" class="input-field" placeholder="Ex: Ecologia, Saude, Educacao...">
+            <input type="text" id="proj-area" class="input-field" placeholder="Ex: Ecologia, Saúde, Educação, Tecnologia...">
           </div>
           <div class="field-wrap">
-            <label for="proj-desc">Descrição breve (opcional)</label>
+            <label for="proj-desc">Descrição breve do projeto (opcional)</label>
             <textarea id="proj-desc" class="input-field" rows="3" placeholder="Descreva brevemente o que este projeto se propõe a fazer..." style="resize:vertical"></textarea>
           </div>
         </div>
       </div>
+
+      <!-- Bloco 2: Comunidades atendidas -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 class="section-heading" style="margin-bottom:4px">Quais comunidades este projeto atende?</h3>
+        <p class="section-sub">Selecione todas as que se aplicam.</p>
+        <div class="checkbox-grid" id="communities-grid">
+          <label class="check-item"><input type="checkbox" value="Comunidade ribeirinha"> Comunidade ribeirinha</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade indígena"> Comunidade indígena</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade quilombola"> Comunidade quilombola</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade rural"> Comunidade rural</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade urbana periférica"> Comunidade urbana periférica</label>
+          <label class="check-item"><input type="checkbox" value="Produtores rurais e agricultores"> Produtores rurais e agricultores</label>
+          <label class="check-item"><input type="checkbox" value="Escolas e estudantes"> Escolas e estudantes</label>
+          <label class="check-item"><input type="checkbox" value="Gestores públicos"> Gestores públicos</label>
+          <label class="check-item"><input type="checkbox" value="Profissionais da saúde"> Profissionais da saúde</label>
+          <label class="check-item"><input type="checkbox" value="ONGs e movimentos sociais"> ONGs e movimentos sociais</label>
+          <label class="check-item"><input type="checkbox" value="Empresas e empreendedores"> Empresas e empreendedores</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade acadêmica"> Comunidade acadêmica</label>
+          <label class="check-item"><input type="checkbox" value="Comunidade em geral"> Comunidade em geral</label>
+          <label class="check-item"><input type="checkbox" value="Outro"> Outro</label>
+        </div>
+        <div class="field-wrap" style="margin-top:10px">
+          <label for="community-other">Especifique outras comunidades (opcional)</label>
+          <input type="text" id="community-other" class="input-field" placeholder="Ex: pescadores artesanais, catadores de resíduos...">
+        </div>
+      </div>
+
+      <!-- Bloco 3: Produto final -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 class="section-heading" style="margin-bottom:4px">Qual será o produto final do projeto?</h3>
+        <p class="section-sub">Selecione todos os produtos que este projeto pretende gerar.</p>
+        <div class="checkbox-grid" id="products-grid">
+          <label class="check-item"><input type="checkbox" value="Artigo científico"> Artigo científico</label>
+          <label class="check-item"><input type="checkbox" value="Dissertação ou tese"> Dissertação ou tese</label>
+          <label class="check-item"><input type="checkbox" value="Relatório técnico"> Relatório técnico</label>
+          <label class="check-item"><input type="checkbox" value="Nota técnica"> Nota técnica</label>
+          <label class="check-item"><input type="checkbox" value="Manual ou guia prático"> Manual ou guia prático</label>
+          <label class="check-item"><input type="checkbox" value="Protocolo ou procedimento"> Protocolo ou procedimento</label>
+          <label class="check-item"><input type="checkbox" value="Protótipo físico ou digital"> Protótipo físico ou digital</label>
+          <label class="check-item"><input type="checkbox" value="Software ou aplicativo"> Software ou aplicativo</label>
+          <label class="check-item"><input type="checkbox" value="Mapa ou cartografia"> Mapa ou cartografia</label>
+          <label class="check-item"><input type="checkbox" value="Banco de dados ou dataset"> Banco de dados ou dataset</label>
+          <label class="check-item"><input type="checkbox" value="Material didático ou educativo"> Material didático ou educativo</label>
+          <label class="check-item"><input type="checkbox" value="Curso ou capacitação"> Curso ou capacitação</label>
+          <label class="check-item"><input type="checkbox" value="Evento, seminário ou oficina"> Evento, seminário ou oficina</label>
+          <label class="check-item"><input type="checkbox" value="Proposta de lei ou normativa"> Proposta de lei ou normativa</label>
+          <label class="check-item"><input type="checkbox" value="Patente ou registro de software"> Patente ou registro de software</label>
+          <label class="check-item"><input type="checkbox" value="Imagem, documentário ou mídia"> Imagem, documentário ou mídia</label>
+          <label class="check-item"><input type="checkbox" value="Produto artístico ou cultural"> Produto artístico ou cultural</label>
+          <label class="check-item"><input type="checkbox" value="Outro"> Outro</label>
+        </div>
+        <div class="field-wrap" style="margin-top:10px">
+          <label for="product-other">Especifique outros produtos (opcional)</label>
+          <input type="text" id="product-other" class="input-field" placeholder="Descreva outros produtos previstos...">
+        </div>
+      </div>
+
+      <!-- Bloco 4: Devolutiva à sociedade -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 class="section-heading" style="margin-bottom:4px">O que este projeto devolve à sociedade?</h3>
+        <p class="section-sub">Descreva de forma objetiva qual é a devolutiva concreta deste projeto para quem ele atende.</p>
+        <div class="field-wrap">
+          <textarea id="proj-devolutiva" class="input-field" rows="4"
+            placeholder="Ex: capacitação de 30 agricultores em técnicas de manejo sustentável; entrega de mapa de risco hídrico para a prefeitura; disponibilização de aplicativo gratuito para monitoramento ambiental..."
+            style="resize:vertical"></textarea>
+        </div>
+      </div>
+
       <div class="form-nav">
         <button class="btn-secondary" onclick="showDashboard()">Cancelar</button>
         <button class="btn-primary" style="width:auto;padding:11px 24px" onclick="goToStep(1)">Iniciar avaliação →</button>
@@ -1130,6 +1392,15 @@ input[type="range"]::-moz-range-thumb {
 
     <!-- Insights -->
     <div class="insights-grid" id="insights-grid"></div>
+
+    <!-- Relatório do Projeto -->
+    <div id="report-section"></div>
+
+    <!-- Medidor de Impacto dos Produtos -->
+    <div id="impact-section"></div>
+
+    <!-- Sugestões para fortalecer extensão -->
+    <div id="ext-suggestions-section"></div>
 
     <!-- Actions -->
     <div class="card card-sm">
@@ -1203,19 +1474,19 @@ const BLOCKS = [
     questions: [
       {
         id: "q01",
-        text: "O projeto envolve diretamente uma comunidade ou populacao externa a universidade?",
+        text: "O projeto envolve diretamente uma comunidade ou população externa à universidade?",
         help: "Considere se há participantes, beneficiários ou parceiros fora do ambiente acadêmico.",
         weights: { ext: 1.0, pes: 0.1, ino: 0.3 }
       },
       {
         id: "q02",
-        text: "Há troca ou construção conjunta de saberes entre universidade e comunidade?",
+        text: "Há troca ou construção conjunta de saberes entre a universidade e a comunidade?",
         help: "O conhecimento é produzido em parceria, não apenas transferido pela universidade.",
         weights: { ext: 1.0, pes: 0.2, ino: 0.2 }
       },
       {
         id: "q03",
-        text: "O impacto esperado e imediato, local e diretamente aplicado na realidade das pessoas?",
+        text: "O impacto esperado é imediato, local e diretamente aplicado na realidade das pessoas?",
         help: "O retorno não é apenas teórico ou de longo prazo, mas visível na vida das pessoas.",
         weights: { ext: 0.9, pes: 0.1, ino: 0.4 }
       },
@@ -1253,8 +1524,8 @@ const BLOCKS = [
       },
       {
         id: "q08",
-        text: "Há revisão de literatura ou fundamentacao teorica como base central do projeto?",
-        help: "O projeto parte de um referencial teórico sólido e dialogando com produção acadêmica existente.",
+        text: "Há revisão de literatura ou fundamentação teórica como base central do projeto?",
+        help: "O projeto parte de um referencial teórico sólido, dialogando com a produção acadêmica existente.",
         weights: { ext: 0.1, pes: 0.9, ino: 0.2 }
       }
     ]
@@ -1267,8 +1538,8 @@ const BLOCKS = [
     questions: [
       {
         id: "q09",
-        text: "O projeto cria ou adapta um produto, processo, servico ou tecnologia nova?",
-        help: "Há uma criacao original — um app, ferramenta, metodologia, protocolo, equipamento, produto.",
+        text: "O projeto cria ou adapta um produto, processo, serviço ou tecnologia nova?",
+        help: "Há uma criação original: um app, ferramenta, metodologia, protocolo, equipamento ou produto.",
         weights: { ext: 0.2, pes: 0.3, ino: 1.0 }
       },
       {
@@ -1279,14 +1550,14 @@ const BLOCKS = [
       },
       {
         id: "q11",
-        text: "O projeto pode ser escalado, replicado ou transferido para outros contextos ou regioes?",
+        text: "O projeto pode ser escalado, replicado ou transferido para outros contextos ou regiões?",
         help: "A solução ou aprendizado pode funcionar além do contexto original.",
         weights: { ext: 0.3, pes: 0.2, ino: 0.9 }
       },
       {
         id: "q12",
-        text: "Há potencial de uso por organizações externas, mercado ou implementacao institucional?",
-        help: "O resultado pode ser adotado por prefeituras, empresas, ONGs, secretarias, outras instituicoes.",
+        text: "Há potencial de uso por organizações externas, mercado ou implementação institucional?",
+        help: "O resultado pode ser adotado por prefeituras, empresas, ONGs, secretarias ou outras instituições.",
         weights: { ext: 0.2, pes: 0.1, ino: 0.9 }
       }
     ]
@@ -1299,26 +1570,26 @@ const BLOCKS = [
     questions: [
       {
         id: "q13",
-        text: "O foco central do projeto e transformar uma realidade social concreta?",
-        help: "O objetivo principal é mudar uma situação real — não apenas estuda-la ou construir uma ferramenta.",
+        text: "O foco central do projeto é transformar uma realidade social concreta?",
+        help: "O objetivo principal é mudar uma situação real, não apenas estudá-la ou construir uma ferramenta.",
         weights: { ext: 1.0, pes: 0.1, ino: 0.4 }
       },
       {
         id: "q14",
         text: "O foco central é compreender um fenômeno natural, social, biológico ou científico?",
-        help: "O objetivo principal é gerar conhecimento e entendimento sobre algo, não necessariamente transforma-lo.",
+        help: "O objetivo principal é gerar conhecimento e entendimento sobre algo, não necessariamente transformá-lo.",
         weights: { ext: 0.2, pes: 1.0, ino: 0.2 }
       },
       {
         id: "q15",
-        text: "O foco central e desenvolver ou adaptar uma solução prática para um problema existente?",
+        text: "O foco central é desenvolver ou adaptar uma solução prática para um problema existente?",
         help: "O projeto visa entregar algo funcional, aplicável e testável para resolver um problema.",
         weights: { ext: 0.3, pes: 0.3, ino: 1.0 }
       },
       {
         id: "q16",
-        text: "O público beneficiário participa ativamente da construcao ou execucao das acoes?",
-        help: "As pessoas não são apenas objeto de estudo ou destinatarias passivas — elas co-constroem.",
+        text: "O público beneficiário participa ativamente da construção ou execução das ações?",
+        help: "As pessoas não são apenas objeto de estudo ou destinatárias passivas: elas co-constroem.",
         weights: { ext: 1.0, pes: 0.2, ino: 0.3 }
       }
     ]
@@ -1332,13 +1603,13 @@ const BLOCKS = [
       {
         id: "q17",
         text: "O projeto depende fortemente de método científico rigoroso para ser válido?",
-        help: "A validade dos resultados exige controle experimental, amostragem, reprodutibilidade.",
+        help: "A validade dos resultados exige controle experimental, amostragem e reprodutibilidade.",
         weights: { ext: 0.1, pes: 1.0, ino: 0.3 }
       },
       {
         id: "q18",
-        text: "O projeto gera ganho de eficiencia, melhoria de processo ou reducao de custos operacionais?",
-        help: "Há lógica de otimizacao, desburocratizacao ou melhoria funcional em algum sistema.",
+        text: "O projeto gera ganho de eficiência, melhoria de processo ou redução de custos operacionais?",
+        help: "Há lógica de otimização, desburocratização ou melhoria funcional em algum sistema.",
         weights: { ext: 0.2, pes: 0.2, ino: 1.0 }
       },
       {
@@ -1350,7 +1621,7 @@ const BLOCKS = [
       {
         id: "q20",
         text: "O projeto produz conhecimento que pode ser sistematizado e transmitido a outras pessoas?",
-        help: "Os aprendizados podem virar material de ensino, guia, manual, curso, metodologia documentada.",
+        help: "Os aprendizados podem virar material de ensino, guia, manual, curso ou metodologia documentada.",
         weights: { ext: 0.5, pes: 0.7, ino: 0.5 }
       }
     ]
@@ -1385,6 +1656,9 @@ let saveTimeout = null;
 // APP INIT
 // =========================================================
 window.onload = function() {
+  // Construir sliders primeiro (necessário antes de qualquer navegação)
+  buildFormSteps();
+
   // Recuperar sessão salva no localStorage
   const savedEmail = localStorage.getItem('radar_user_email');
   if (savedEmail) {
@@ -1393,9 +1667,9 @@ window.onload = function() {
       uid: 'u_' + savedEmail.replace(/[^a-zA-Z0-9]/g, '_')
     };
     onUserLoggedIn(currentUser);
+  } else {
+    showScreen('login');
   }
-  // Inicializar sliders
-  buildFormSteps();
 };
 
 // =========================================================
@@ -1411,13 +1685,14 @@ function entrarDireto() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Entrando...';
 
-  // Salvar sessão local
+  // Salvar sessão local e entrar
   localStorage.setItem('radar_user_email', email);
   currentUser = {
     email: email,
     uid: 'u_' + email.replace(/[^a-zA-Z0-9]/g, '_')
   };
-  onUserLoggedIn(currentUser);
+  // Pequeno delay para o spinner aparecer antes de trocar a tela
+  setTimeout(() => onUserLoggedIn(currentUser), 300);
 }
 
 function onUserLoggedIn(user) {
@@ -1544,18 +1819,32 @@ function onSliderChange(qId, value) {
 // =========================================================
 function goToStep(step) {
   if (step === 1) {
-    // Validate project info
     const title = document.getElementById('proj-title').value.trim();
     if (!title) {
       document.getElementById('proj-title').focus();
       showToast('Por favor, informe o título do projeto.');
       return;
     }
+    // Coletar comunidades selecionadas
+    const communities = [];
+    document.querySelectorAll('#communities-grid input:checked').forEach(cb => communities.push(cb.value));
+    const communityOther = document.getElementById('community-other').value.trim();
+    if (communityOther) communities.push(communityOther);
+
+    // Coletar produtos selecionados
+    const products = [];
+    document.querySelectorAll('#products-grid input:checked').forEach(cb => products.push(cb.value));
+    const productOther = document.getElementById('product-other').value.trim();
+    if (productOther) products.push(productOther);
+
     currentProjectInfo = {
       title: title,
       author: document.getElementById('proj-author').value.trim(),
       area: document.getElementById('proj-area').value.trim(),
-      description: document.getElementById('proj-desc').value.trim()
+      description: document.getElementById('proj-desc').value.trim(),
+      communities: communities,
+      products: products,
+      devolutiva: document.getElementById('proj-devolutiva').value.trim()
     };
   }
 
@@ -1623,6 +1912,168 @@ function buildReview() {
     html += `</div></div>`;
   });
   document.getElementById('review-content').innerHTML = html;
+}
+
+
+// =========================================================
+// MODELO DE IMPACTO SOCIAL POR PRODUTO
+// Escala: Alcance (0-10) × Durabilidade (0-10) × Acessibilidade (0-10)
+// Máximo teórico: 1000 → normalizado para 0-100
+// =========================================================
+const PRODUCT_IMPACT = {
+  "Artigo científico":          { alcance: 5, durabilidade: 9, acessibilidade: 4, desc: "Alto valor acadêmico e durabilidade, mas acesso restrito ao público geral." },
+  "Dissertação ou tese":        { alcance: 4, durabilidade: 9, acessibilidade: 5, desc: "Sólida base científica com acesso crescente via repositórios." },
+  "Relatório técnico":          { alcance: 6, durabilidade: 7, acessibilidade: 6, desc: "Útil para gestores e tomadores de decisão. Impacto direto em políticas." },
+  "Nota técnica":               { alcance: 6, durabilidade: 6, acessibilidade: 7, desc: "Comunicação objetiva de resultados para gestão e legislação." },
+  "Manual ou guia prático":     { alcance: 7, durabilidade: 8, acessibilidade: 8, desc: "Alto impacto por facilitar a adoção de práticas por pessoas comuns." },
+  "Protocolo ou procedimento":  { alcance: 6, durabilidade: 8, acessibilidade: 6, desc: "Garante replicabilidade e padronização. Impacto técnico sólido." },
+  "Protótipo físico ou digital":{ alcance: 7, durabilidade: 7, acessibilidade: 7, desc: "Demonstra viabilidade concreta. Potencial de escala via produção." },
+  "Software ou aplicativo":     { alcance: 9, durabilidade: 7, acessibilidade: 9, desc: "Altíssimo alcance potencial, escalável e de fácil distribuição." },
+  "Mapa ou cartografia":        { alcance: 7, durabilidade: 8, acessibilidade: 7, desc: "Forte apelo visual e uso prático em planejamento territorial." },
+  "Banco de dados ou dataset":  { alcance: 6, durabilidade: 9, acessibilidade: 5, desc: "Base para futuras pesquisas e políticas. Impacto de longo prazo." },
+  "Material didático ou educativo": { alcance: 8, durabilidade: 8, acessibilidade: 9, desc: "Impacto direto na formação e multiplicação de conhecimento." },
+  "Curso ou capacitação":       { alcance: 7, durabilidade: 6, acessibilidade: 8, desc: "Transformação direta de pessoas. Alta aplicação no cotidiano." },
+  "Evento, seminário ou oficina": { alcance: 6, durabilidade: 4, acessibilidade: 7, desc: "Impacto imediato na troca de saberes, mas limitado no tempo." },
+  "Proposta de lei ou normativa": { alcance: 9, durabilidade: 10, acessibilidade: 6, desc: "Potencial de transformação sistêmica e duradoura na sociedade." },
+  "Patente ou registro de software": { alcance: 6, durabilidade: 9, acessibilidade: 5, desc: "Proteção da inovação com potencial de licenciamento e transferência." },
+  "Imagem, documentário ou mídia": { alcance: 8, durabilidade: 7, acessibilidade: 9, desc: "Alto alcance comunicacional e capacidade de sensibilização social." },
+  "Produto artístico ou cultural": { alcance: 7, durabilidade: 8, acessibilidade: 8, desc: "Impacto cultural e identitário com potencial de preservação de memórias." }
+};
+
+function calcImpactScore(p) {
+  if (!PRODUCT_IMPACT[p]) return 0;
+  const d = PRODUCT_IMPACT[p];
+  return Math.round((d.alcance * d.durabilidade * d.acessibilidade) / 10);
+}
+
+function renderReport(result) {
+  const info = result.projectInfo || {};
+  const communities = info.communities || [];
+  const products = info.products || [];
+  const devolutiva = info.devolutiva || '';
+
+  // Só renderiza se houver dados
+  if (!communities.length && !products.length && !devolutiva) {
+    document.getElementById('report-section').innerHTML = '';
+    document.getElementById('impact-section').innerHTML = '';
+    document.getElementById('ext-suggestions-section').innerHTML = '';
+    return;
+  }
+
+  // --- Relatório ---
+  let reportHtml = '<div class="report-section">';
+  reportHtml += '<h3>📋 Relatório do Projeto</h3>';
+
+  if (communities.length > 0) {
+    reportHtml += '<div style="margin-bottom:16px">';
+    reportHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-600);margin-bottom:8px">🤝 Comunidades atendidas</div>';
+    reportHtml += '<div class="report-tags">';
+    communities.forEach(c => { reportHtml += `<span class="report-tag green">${c}</span>`; });
+    reportHtml += '</div></div>';
+  }
+
+  if (products.length > 0) {
+    reportHtml += '<div style="margin-bottom:16px">';
+    reportHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-600);margin-bottom:8px">📦 Produtos previstos</div>';
+    reportHtml += '<div class="report-tags">';
+    products.forEach(p => { reportHtml += `<span class="report-tag">${p}</span>`; });
+    reportHtml += '</div></div>';
+  }
+
+  if (devolutiva) {
+    reportHtml += '<div>';
+    reportHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-600);margin-bottom:8px">🔄 Devolutiva à sociedade</div>';
+    reportHtml += `<div class="devolutiva-box">${devolutiva}</div>`;
+    reportHtml += '</div>';
+  }
+
+  reportHtml += '</div>';
+  document.getElementById('report-section').innerHTML = reportHtml;
+
+  // --- Medidor de impacto por produto ---
+  const knownProducts = products.filter(p => PRODUCT_IMPACT[p]);
+  if (knownProducts.length > 0) {
+    const sorted = [...knownProducts].sort((a,b) => calcImpactScore(b) - calcImpactScore(a));
+    const maxScore = Math.max(...sorted.map(p => calcImpactScore(p)));
+
+    let impHtml = '<div class="impact-section">';
+    impHtml += '<h3>📡 Espectro de Impacto Social dos Produtos</h3>';
+    impHtml += '<p>Índice calculado com base em alcance, durabilidade e acessibilidade de cada tipo de produto. Escala de 0 a 100.</p>';
+    impHtml += '<div class="impact-products-list">';
+
+    sorted.forEach(p => {
+      const score = calcImpactScore(p);
+      const pct = maxScore > 0 ? Math.round((score/100)*100) : 0;
+      const color = score >= 60 ? 'var(--ext)' : score >= 40 ? 'var(--pes)' : 'var(--ino)';
+      const tip = PRODUCT_IMPACT[p] ? PRODUCT_IMPACT[p].desc : '';
+      impHtml += `<div class="impact-product-row">
+        <div class="impact-product-label">
+          <div style="font-weight:600;font-size:13px">${p}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${tip}</div>
+        </div>
+        <div class="impact-bar">
+          <div class="impact-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <span class="impact-score-badge" style="background:${color}20;color:${color}">${score}/100</span>
+      </div>`;
+    });
+
+    impHtml += '</div></div>';
+    document.getElementById('impact-section').innerHTML = impHtml;
+  } else {
+    document.getElementById('impact-section').innerHTML = '';
+  }
+
+  // --- Sugestões para fortalecer extensão ---
+  renderExtSuggestions(result);
+}
+
+function renderExtSuggestions(result) {
+  const pct = result.computedScores.pct;
+  const info = result.projectInfo || {};
+  const products = info.products || [];
+  const communities = info.communities || [];
+
+  const suggestions = [];
+
+  // Sugestões baseadas nos percentuais
+  if (pct.ext < 50) {
+    suggestions.push('Envolva diretamente representantes da comunidade nas etapas de planejamento e execução do projeto.');
+    suggestions.push('Defina claramente como os resultados serão entregues à comunidade (relatório público, evento, oficina, material impresso).');
+  }
+  if (pct.ext < 40) {
+    suggestions.push('Considere criar um comitê ou grupo consultivo com membros externos à universidade para orientar as ações.');
+    suggestions.push('Estabeleça indicadores de impacto social mensuráveis antes de iniciar o projeto.');
+  }
+  if (communities.length === 0) {
+    suggestions.push('Identifique e nomeie as comunidades beneficiárias com precisão: isso fortalece o perfil de extensão e facilita a prestação de contas.');
+  }
+  if (products.length > 0) {
+    const hasPublic = products.some(p => ['Manual ou guia prático','Material didático ou educativo','Curso ou capacitação','Evento, seminário ou oficina','Imagem, documentário ou mídia'].includes(p));
+    if (!hasPublic) {
+      suggestions.push('Inclua pelo menos um produto de comunicação pública (manual, oficina, vídeo, evento) para ampliar o alcance social dos resultados.');
+    }
+  }
+  if (!info.devolutiva) {
+    suggestions.push('Escreva explicitamente a devolutiva do projeto: o que a comunidade receberá de volta? Isso é central para caracterizar extensão universitária.');
+  }
+  if (pct.pes > 60 && pct.ext < 40) {
+    suggestions.push('Seu projeto tem forte base de pesquisa. Considere criar uma etapa de devolutiva dos resultados para a comunidade estudada, transformando a pesquisa em extensão.');
+  }
+  if (pct.ino > 60 && pct.ext < 40) {
+    suggestions.push('A inovação é forte, mas a extensão pode ser reforçada realizando testes e validações do produto/serviço diretamente com a comunidade beneficiária.');
+  }
+
+  if (suggestions.length === 0) {
+    suggestions.push('O projeto já apresenta bom potencial de extensão. Mantenha o engajamento comunitário durante toda a execução.');
+  }
+
+  const html = `<div class="suggestions-ext">
+    <h4>💡 Como fortalecer a extensão do projeto</h4>
+    <ul>${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
+  </div>`;
+
+  document.getElementById('ext-suggestions-section').innerHTML = html;
 }
 
 // =========================================================
