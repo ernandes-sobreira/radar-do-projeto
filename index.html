@@ -1183,7 +1183,7 @@ input[type="range"]::-moz-range-thumb {
 <!-- ============================================================
      SCREEN: LOGIN
      ============================================================ -->
-<div id="screen-login" class="screen active">
+<div id="screen-login" class="screen" style="display:block">
   <div class="main-container" style="padding-top:0;padding-bottom:0;max-width:100%">
     <div class="login-box">
       <div class="login-hero">⬡</div>
@@ -1207,7 +1207,7 @@ input[type="range"]::-moz-range-thumb {
 <!-- ============================================================
      SCREEN: DASHBOARD
      ============================================================ -->
-<div id="screen-dashboard" class="screen">
+<div id="screen-dashboard" class="screen" style="display:none">
   <div class="main-container">
     <div class="dash-header">
       <h2 class="section-heading">Suas Avaliações</h2>
@@ -1232,7 +1232,7 @@ input[type="range"]::-moz-range-thumb {
 <!-- ============================================================
      SCREEN: FORM (quiz)
      ============================================================ -->
-<div id="screen-form" class="screen">
+<div id="screen-form" class="screen" style="display:none">
   <div class="main-container">
 
     <div class="form-header">
@@ -1370,7 +1370,7 @@ input[type="range"]::-moz-range-thumb {
 <!-- ============================================================
      SCREEN: RESULTS
      ============================================================ -->
-<div id="screen-results" class="screen">
+<div id="screen-results" class="screen" style="display:none">
   <div class="main-container">
 
     <!-- Hero -->
@@ -1716,8 +1716,15 @@ function logout() {
 // NAVIGATION
 // =========================================================
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
+  ['login','dashboard','form','results'].forEach(function(s) {
+    const el = document.getElementById('screen-' + s);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('screen-' + name);
+  if (target) {
+    target.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
 }
 
 function showDashboard() {
