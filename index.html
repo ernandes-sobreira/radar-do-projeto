@@ -1155,8 +1155,122 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 700;
 }
 
+/* DEEP RESULTS */
+.deep-section {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.deep-section-header {
+  padding: 16px 20px 12px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.deep-section-header h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.deep-body {
+  padding: 18px 20px;
+}
+
+.deep-list {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.deep-list li {
+  font-size: 13px;
+  color: var(--gray-700);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.deep-list li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ods-badge {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 8px 14px;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: var(--transition);
+  min-width: 120px;
+}
+
+.ods-badge:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.ods-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.ods-title {
+  font-size: 12px;
+  color: #1e40af;
+  line-height: 1.3;
+}
+
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.resource-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--gray-50);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-size: 13px;
+  color: var(--gray-700);
+  transition: var(--transition);
+  line-height: 1.4;
+}
+
+.resource-link:hover {
+  background: var(--pes-light);
+  border-color: var(--pes);
+  color: var(--pes);
+}
+
+.resource-link-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 540px) {
   .checkbox-grid { grid-template-columns: 1fr; }
+  .links-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -1401,6 +1515,9 @@ input[type="range"]::-moz-range-thumb {
 
     <!-- Sugestões para fortalecer extensão -->
     <div id="ext-suggestions-section"></div>
+
+    <!-- Análise profunda por eixo -->
+    <div id="deep-results-section"></div>
 
     <!-- Actions -->
     <div class="card card-sm">
@@ -2148,43 +2265,267 @@ function classifyProject(pct) {
 
 function generateInsights(pct, responses, ranked) {
   const strong = [];
-  const suggestions = [];
 
-  // Analisar pontos fortes por bloco
   BLOCKS.forEach(block => {
     let blockScore = 0;
-    block.questions.forEach(q => {
-      blockScore += (responses[q.id] || 5);
-    });
-    const avg = blockScore / block.questions.length;
-    if (avg >= 7) strong.push(block.name + ' (' + block.icon + ')');
+    block.questions.forEach(q => { blockScore += (responses[q.id] || 5); });
+    if (blockScore / block.questions.length >= 7) strong.push(block.name + ' ' + block.icon);
   });
 
-  // Sugestões baseadas em eixos mais fracos
-  const weakAxis = ranked[ranked.length - 1];
-  if (weakAxis.key === 'ext' && weakAxis.pct < 40) {
-    suggestions.push('Integre comunidades externas ao design ou execução do projeto.');
-    suggestions.push('Estabeleça retorno social mensurável para os beneficiários.');
-  } else if (weakAxis.key === 'pes' && weakAxis.pct < 40) {
-    suggestions.push('Formalize uma pergunta de investigação ou hipótese de pesquisa.');
-    suggestions.push('Inclua metodologia sistemática de coleta e análise de dados.');
-  } else if (weakAxis.key === 'ino' && weakAxis.pct < 40) {
-    suggestions.push('Explore a criação de um produto, metodologia ou ferramenta aplicada.');
-    suggestions.push('Avalie o potencial de escalabilidade ou replicação da solução.');
-  }
-
-  // Sugestao para eixo intermediario
-  const midAxis = ranked[1];
-  if (midAxis.pct > 40 && midAxis.pct < 55) {
-    if (midAxis.key === 'ext') suggestions.push('Amplie o engajamento comunitário para consolidar o perfil de extensão.');
-    if (midAxis.key === 'pes') suggestions.push('Fortaleça o rigor metodológico para qualificar o componente de pesquisa.');
-    if (midAxis.key === 'ino') suggestions.push('Desenvolva um protótipo ou solução concreta para reforçar a inovação.');
-  }
+  // Quais perguntas tiveram score mais alto (top 3)
+  const allQ = [];
+  BLOCKS.forEach(b => b.questions.forEach(q => {
+    allQ.push({ text: q.text.replace(/\?$/, ''), val: responses[q.id] || 5 });
+  }));
+  allQ.sort((a, b) => b.val - a.val);
+  const topQ = allQ.slice(0, 3).filter(q => q.val >= 7);
 
   return {
-    strong: strong.length > 0 ? strong : ['Projeto com distribuição equilibrada entre os eixos'],
-    suggestions: suggestions.length > 0 ? suggestions : ['Mantenha o equilibrio entre os três eixos para um projeto integrado robusto.']
+    strong: strong.length > 0 ? strong : ['Perfil distribuído entre os três eixos'],
+    topAnswers: topQ
   };
+}
+
+// =========================================================
+// INTERPRETAÇÃO DETALHADA POR EIXO
+// =========================================================
+const AXIS_DEEP = {
+  ext: {
+    why: [
+      'O projeto demonstra forte orientação para a sociedade: há engajamento com comunidades externas, impacto direto na realidade das pessoas e ações de formação ou intervenção.',
+      'A construção conjunta de saberes e a participação ativa dos beneficiários são elementos marcantes, o que é a essência da extensão universitária.',
+      'O retorno social esperado é concreto e aplicado, não apenas teórico — isso diferencia a extensão da pesquisa convencional.'
+    ],
+    ods: [
+      { num: '4', title: 'Educação de Qualidade', link: 'https://brasil.un.org/pt-br/sdgs/4' },
+      { num: '10', title: 'Redução das Desigualdades', link: 'https://brasil.un.org/pt-br/sdgs/10' },
+      { num: '11', title: 'Cidades e Comunidades Sustentáveis', link: 'https://brasil.un.org/pt-br/sdgs/11' },
+      { num: '17', title: 'Parcerias e Meios de Implementação', link: 'https://brasil.un.org/pt-br/sdgs/17' }
+    ],
+    intl: 'A extensão universitária tem reconhecimento internacional crescente. Explore editais de cooperação sul-sul, redes como a AUGM (Associação de Universidades Grupo Montevidéu) e o programa ERASMUS+ da União Europeia para projetos de impacto social.',
+    intl_links: [
+      { label: 'AUGM — Universidades do Mercosul', url: 'https://www.grupomontevideo.org' },
+      { label: 'ERASMUS+ Internacional', url: 'https://www.erasmusplus.org.uk' },
+      { label: 'FAO — Parcerias para Extensão Rural', url: 'https://www.fao.org/partnerships' }
+    ],
+    bases: [
+      { label: 'RENEX — Rede Nacional de Extensão', url: 'https://www.forproex.org.br/renex' },
+      { label: 'FORPROEX — Fórum de Pró-Reitores', url: 'https://www.forproex.org.br' },
+      { label: 'Portal MEC — Extensão Universitária', url: 'http://portal.mec.gov.br/extensao-universitaria' },
+      { label: 'Plataforma Freire — Bolsas e Editais', url: 'https://freire.mec.gov.br' }
+    ],
+    tips: [
+      'Registre o projeto no sistema de extensão da UNEMAT e vincule às metas do PDI institucional.',
+      'Documente cada ação com fotos, listas de presença e relatórios de impacto — isso fortalece a comprovação da carga horária curricular de extensão (10% obrigatórios).',
+      'Busque editais do PROEXT-PG, CAPES e FAPEMT para financiamento de projetos de extensão.',
+      'Estabeleça indicadores de impacto antes de iniciar: número de pessoas capacitadas, área atendida, produto entregue à comunidade.',
+      'Articule o projeto com a Política Nacional de Extensão Universitária (Resolução CNE/CES nº 7/2018).'
+    ]
+  },
+  pes: {
+    why: [
+      'O projeto apresenta forte base científica: há uma pergunta de investigação clara, método formal de coleta e análise de dados, e potencial de produção de conhecimento novo.',
+      'A fundamentação teórica sólida e o rigor metodológico são marcas de um projeto de pesquisa bem estruturado.',
+      'O foco em compreender fenômenos antes de transformá-los indica uma orientação científica predominante.'
+    ],
+    ods: [
+      { num: '3', title: 'Saúde e Bem-Estar', link: 'https://brasil.un.org/pt-br/sdgs/3' },
+      { num: '13', title: 'Ação Contra a Mudança Global do Clima', link: 'https://brasil.un.org/pt-br/sdgs/13' },
+      { num: '15', title: 'Vida Terrestre', link: 'https://brasil.un.org/pt-br/sdgs/15' },
+      { num: '9', title: 'Indústria, Inovação e Infraestrutura', link: 'https://brasil.un.org/pt-br/sdgs/9' }
+    ],
+    intl: 'Para pesquisa de alto impacto, busque publicar em periódicos com alto fator de impacto (JCR/Qualis A1-A2). Conecte-se a redes internacionais de pesquisa e explore co-autorias com pesquisadores do exterior via plataformas como ResearchGate e o Lattes Internacional.',
+    intl_links: [
+      { label: 'Web of Science — Pesquisa de Alto Impacto', url: 'https://www.webofscience.com' },
+      { label: 'Scopus — Base Internacional Elsevier', url: 'https://www.scopus.com' },
+      { label: 'ResearchGate — Rede de Pesquisadores', url: 'https://www.researchgate.net' },
+      { label: 'Dimensions — Base Livre e Aberta', url: 'https://app.dimensions.ai' }
+    ],
+    bases: [
+      { label: 'Portal CAPES de Periódicos', url: 'https://www.periodicos.capes.gov.br' },
+      { label: 'SciELO Brasil', url: 'https://www.scielo.br' },
+      { label: 'Google Scholar', url: 'https://scholar.google.com' },
+      { label: 'BDTD — Teses e Dissertações do Brasil', url: 'https://bdtd.ibict.br' },
+      { label: 'Plataforma Lattes CNPq', url: 'https://lattes.cnpq.br' }
+    ],
+    tips: [
+      'Verifique o Qualis CAPES do periódico-alvo antes de submeter — priorize A1 e A2 para maior impacto.',
+      'Registre o projeto no Diretório de Grupos de Pesquisa do CNPq para aumentar visibilidade e facilitar parcerias.',
+      'Explore financiamento via FAPEMT, CNPq (Universal, Produtividade) e CAPES (PROEX, PROCAD).',
+      'Considere o pré-registro do estudo em plataformas como OSF (Open Science Framework) para aumentar credibilidade metodológica.',
+      'Busque parceiros internacionais para co-autoria — projetos bilaterais têm maior chance de financiamento e publicação em revistas de alto impacto.'
+    ]
+  },
+  ino: {
+    why: [
+      'O projeto demonstra forte orientação para inovação: há criação ou adaptação de produtos, processos ou tecnologias, com potencial de aplicação concreta e escalabilidade.',
+      'A lógica de prototipagem, ganho de eficiência e possibilidade de transferência tecnológica são características marcantes de projetos inovadores.',
+      'O potencial de uso por organizações externas ou pelo mercado indica que o projeto vai além da academia.'
+    ],
+    ods: [
+      { num: '9', title: 'Indústria, Inovação e Infraestrutura', link: 'https://brasil.un.org/pt-br/sdgs/9' },
+      { num: '8', title: 'Trabalho Decente e Crescimento Econômico', link: 'https://brasil.un.org/pt-br/sdgs/8' },
+      { num: '12', title: 'Consumo e Produção Responsáveis', link: 'https://brasil.un.org/pt-br/sdgs/12' },
+      { num: '17', title: 'Parcerias para os Objetivos', link: 'https://brasil.un.org/pt-br/sdgs/17' }
+    ],
+    intl: 'Inovações com potencial de impacto global podem ser protegidas e escaladas com apoio de organizações internacionais. Explore o sistema PCT de patentes internacionais, aceleradoras como a InovAtiva Brasil e programas de transferência tecnológica.',
+    intl_links: [
+      { label: 'WIPO — Patentes Internacionais (PCT)', url: 'https://www.wipo.int/pct/pt' },
+      { label: 'InovAtiva Brasil — Aceleração de Startups', url: 'https://www.inovativabrasil.com.br' },
+      { label: 'ANPEI — Inovação Empresarial', url: 'https://anpei.org.br' },
+      { label: 'Startup Brasil — MCTI', url: 'https://startupbrasil.org.br' }
+    ],
+    bases: [
+      { label: 'INPI — Registro de Patentes e Software', url: 'https://www.gov.br/inpi' },
+      { label: 'EMBRAPII — Inovação com Empresas', url: 'https://embrapii.org.br' },
+      { label: 'FINEP — Financiamento à Inovação', url: 'https://www.finep.gov.br' },
+      { label: 'SENAI CIMATEC — Inovação Industrial', url: 'https://www.senaicimatec.com.br' },
+      { label: 'NIT UNEMAT — Núcleo de Inovação', url: 'https://unemat.br/pesquisa/nit' }
+    ],
+    tips: [
+      'Registre softwares, metodologias e produtos no INPI antes de publicar — a divulgação prévia pode comprometer a patenteabilidade.',
+      'Articule-se com o NIT (Núcleo de Inovação Tecnológica) da UNEMAT para suporte em propriedade intelectual e transferência de tecnologia.',
+      'Explore editais FINEP, BNDES Garagem e EMBRAPII para financiamento de inovação com empresas parceiras.',
+      'Documente todas as etapas do desenvolvimento como "caderno de inovação" — isso é requisito para processos de registro e licenciamento.',
+      'Considere criar um plano de negócios ou modelo de transferência tecnológica para garantir que a inovação chegue ao usuário final.'
+    ]
+  }
+};
+
+function renderDeepResults(result, ranked, pct) {
+  const first = ranked[0];
+  const axisKey = first.key.replace('hybrid-', '');
+  const axis = AXIS_DEEP[axisKey] || AXIS_DEEP['pes'];
+  const info = result.projectInfo || {};
+  const area = info.area || '';
+
+  // Cor do eixo predominante
+  const axisColor = { ext: 'var(--ext)', pes: 'var(--pes)', ino: 'var(--ino)' }[axisKey] || 'var(--pes)';
+  const axisName = { ext: 'Extensão', pes: 'Pesquisa', ino: 'Inovação' }[axisKey] || first.label;
+
+  let html = '';
+
+  // --- POR QUE ESTE PERFIL ---
+  html += `<div class="deep-section">
+    <div class="deep-section-header" style="border-left:4px solid ${axisColor}">
+      <h3>🔍 Por que este projeto tem perfil de ${axisName}?</h3>
+    </div>
+    <div class="deep-body">
+      <ul class="deep-list">
+        ${axis.why.map(w => `<li>${w}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // --- ODS RELACIONADOS ---
+  html += `<div class="deep-section">
+    <div class="deep-section-header" style="border-left:4px solid #2563eb">
+      <h3>🌍 Objetivos de Desenvolvimento Sustentável (ODS) relacionados</h3>
+    </div>
+    <div class="deep-body">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">
+        Com base no perfil deste projeto, ele contribui mais diretamente para os seguintes ODS da Agenda 2030 da ONU:
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${axis.ods.map(o => `
+          <a href="${o.link}" target="_blank" class="ods-badge">
+            <span class="ods-num">ODS ${o.num}</span>
+            <span class="ods-title">${o.title}</span>
+          </a>`).join('')}
+      </div>
+      <p style="font-size:12px;color:var(--gray-400);margin-top:10px">
+        Clique em cada ODS para ver metas, indicadores e exemplos de projetos no portal da ONU.
+      </p>
+    </div>
+  </div>`;
+
+  // --- INTERNACIONALIZAÇÃO ---
+  html += `<div class="deep-section">
+    <div class="deep-section-header" style="border-left:4px solid #7c3aed">
+      <h3>🌐 Potencial de internacionalização</h3>
+    </div>
+    <div class="deep-body">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">${axis.intl}</p>
+      <div class="links-grid">
+        ${axis.intl_links.map(l => `
+          <a href="${l.url}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🔗</span>
+            <span>${l.label}</span>
+          </a>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // --- BASES E RECURSOS ---
+  html += `<div class="deep-section">
+    <div class="deep-section-header" style="border-left:4px solid ${axisColor}">
+      <h3>📚 Bases de dados e recursos recomendados</h3>
+    </div>
+    <div class="deep-body">
+      <div class="links-grid">
+        ${axis.bases.map(l => `
+          <a href="${l.url}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🔗</span>
+            <span>${l.label}</span>
+          </a>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // --- DICAS PRÁTICAS ---
+  html += `<div class="deep-section">
+    <div class="deep-section-header" style="border-left:4px solid #059669">
+      <h3>✅ O que fazer agora: dicas práticas</h3>
+    </div>
+    <div class="deep-body">
+      <ul class="deep-list">
+        ${axis.tips.map(t => `<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
+
+  // --- BUSCA TEMÁTICA (se área preenchida) ---
+  if (area) {
+    const q = encodeURIComponent(area);
+    html += `<div class="deep-section">
+      <div class="deep-section-header" style="border-left:4px solid #d97706">
+        <h3>🔎 Pesquisar literatura sobre "${area}"</h3>
+      </div>
+      <div class="deep-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">
+          Com base na área temática informada, acesse diretamente as principais bases científicas:
+        </p>
+        <div class="links-grid">
+          <a href="https://scholar.google.com/scholar?q=${q}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🎓</span>
+            <span>Google Scholar — "${area}"</span>
+          </a>
+          <a href="https://www.periodicos.capes.gov.br/?option=com_pemetabusca&mn=88&smn=88&type=b&metalib=aHR0cHM6Ly9hY2Vzc28ucGVyaW9kaWNvcy5jYXBlcy5nb3YuYnIvcGZyZXNvbHZlcj9vcGVudXJsPXZlcnNpb249MS4wJnJmcl9pZD1pbmZvJTNBc2lkJTJGZ29vZ2xlJnJlc3VsdF9pZD0xJmlkPWluZm8lM0Fkb2klMkYmc3ZjX3ZhbD1zcGVsbGNoZWNrJnVzZXJfaWQ9MCZzZXJ2aWNlVHlwZT1nZXRGdWxsVHh0JnJmci5kYXQ9Y3IlM0R1c0ElMjZicnQ9MCZydGZtdD0mc3ZjLnZlcnNpb249MS4wJnN2Yy5pZD1JbmZvJTNBb2FpJTJG" target="_blank" class="resource-link">
+            <span class="resource-link-icon">📰</span>
+            <span>Portal CAPES de Periódicos</span>
+          </a>
+          <a href="https://www.scielo.br/search#/?q=${q}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🔬</span>
+            <span>SciELO — "${area}"</span>
+          </a>
+          <a href="https://app.dimensions.ai/discover/publication?search_mode=content&search_text=${q}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">📊</span>
+            <span>Dimensions — "${area}"</span>
+          </a>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/?term=${q}" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🏥</span>
+            <span>PubMed — "${area}"</span>
+          </a>
+          <a href="https://www.scopus.com/results/results.uri?query=${q}&search=Search&dbsearch=&origin=searchbasic" target="_blank" class="resource-link">
+            <span class="resource-link-icon">🌐</span>
+            <span>Scopus — "${area}"</span>
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('deep-results-section').innerHTML = html;
 }
 
 // =========================================================
@@ -2193,7 +2534,7 @@ function generateInsights(pct, responses, ranked) {
 function calculateAndShowResults() {
   const { raw, pct } = calculateScores(currentResponses);
   const { classification, label, type, ranked } = classifyProject(pct);
-  const { strong, suggestions } = generateInsights(pct, currentResponses, ranked);
+  const { strong, topAnswers } = generateInsights(pct, currentResponses, ranked);
 
   const result = {
     assessmentId: currentAssessmentId,
@@ -2203,7 +2544,7 @@ function calculateAndShowResults() {
     responses: { ...currentResponses },
     computedScores: { raw, pct },
     classification: { text: classification, label, type },
-    insights: { strong, suggestions },
+    insights: { strong, topAnswers },
     modelVersion: MODEL_VERSION,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -2314,10 +2655,16 @@ function renderResults(result, ranked, pct) {
 
 function buildInterpretationText(type, ranked, pct) {
   const [first, second] = ranked;
-  if (type === 'undefined') return 'As respostas não mostram um perfil definido. Revisar o escopo do projeto pode ajudar a clarificar seu enquadramento.';
-  if (type === 'integrated') return `Este projeto apresenta um perfil equilibrado entre os três eixos (${pct.ext}% Extensao, ${pct.pes}% Pesquisa, ${pct.ino}% Inovacao), caracterizando uma proposta integrada que combina impacto social, rigor científico e solução aplicada.`;
-  if (type.startsWith('hybrid')) return `Este projeto e hibrido, com predominancia em ${first.label} (${first.pct}%) e forte componente de ${second.label} (${second.pct}%), o que indica uma proposta que une essas duas dimensoes de forma significativa.`;
-  return `Este projeto apresenta perfil predominantemente de ${first.label} (${first.pct}%), com caracteristicas marcantes de impacto, metodo e foco alinhados a esse eixo.`;
+  if (type === 'undefined') return 'As respostas não mostram um perfil claramente definido. Revisar o escopo do projeto pode ajudar a clarificar seu enquadramento nos eixos de Extensão, Pesquisa e Inovação.';
+  if (type === 'integrated') return `Este projeto apresenta um perfil equilibrado entre os três eixos (Extensão: ${pct.ext}%, Pesquisa: ${pct.pes}%, Inovação: ${pct.ino}%), caracterizando uma proposta integrada que combina impacto social, rigor científico e solução aplicada. Projetos assim têm grande potencial de financiamento em editais interdisciplinares.`;
+  if (type.startsWith('hybrid')) return `Este projeto é híbrido, com predominância em ${first.label} (${first.pct}%) e forte componente de ${second.label} (${second.pct}%). Essa combinação é estratégica: permite financiamento em editais de ambos os eixos e amplia o impacto e a publicação dos resultados.`;
+  const explMap = {
+    ext: `forte interação com a sociedade, impacto direto nas comunidades e ações de formação e intervenção`,
+    pes: `presença de pergunta científica, método formal de investigação e potencial de produção e publicação de conhecimento novo`,
+    ino: `orientação para criação de produtos, processos ou tecnologias aplicadas, com potencial de escalabilidade e transferência`
+  };
+  const expl = explMap[first.key] || 'foco bem definido em um dos eixos acadêmicos';
+  return `Este projeto tem perfil predominantemente de ${first.label} (${first.pct}%), evidenciado pela ${expl}. Veja abaixo a análise detalhada, os ODS relacionados, as bases de dados recomendadas e as dicas práticas para avançar neste eixo.`;
 }
 
 // =========================================================
