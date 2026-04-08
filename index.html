@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RADAR DO PROJETO | PROEXT-PG · UNEMAT</title>
+
+<!-- Firebase v9 compat -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================
+   VARIABLES & RESET
+   ============================================ */
+:root {
+  --ext: #1a7f5a;
+  --pes: #1a5fa0;
+  --ino: #c45c00;
+  --ext-light: #e6f5ef;
+  --pes-light: #e6eff8;
+  --ino-light: #fdf0e6;
+  --bg: #f7f8fc;
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f0f2f5;
+  --gray-200: #e4e7ec;
+  --gray-400: #9aa5b4;
+  --gray-600: #4a5568;
+  --gray-800: #1a2234;
+  --accent: #2563eb;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 16px rgba(0,0,0,0.07);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'DM Serif Display', serif;
+  --max-w: 760px;
+  --transition: 0.2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--gray-800);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ============================================
+   LAYOUT
+   ============================================ */
+.app-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 20px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--pes), var(--ext));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+
+.header-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--gray-800);
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 11px;
+  color: var(--gray-400);
+  letter-spacing: 0.03em;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+#btn-logout {
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: var(--transition);
+}
+#btn-logout:hover { background: var(--gray-100); }
+
+.main-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+/* ============================================
+   SCREENS (only one visible at a time)
+   ============================================ */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  margin-bottom: 20px;
+}
+
+.card-sm {
+  padding: 20px 24px;
+}
+
+/* ============================================
+   LOGIN SCREEN
+   ============================================ */
+#screen-login {
+  min-height: calc(100vh - 62px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-box {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-md);
+  padding: 48px 40px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+}
+
+.login-hero {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--pes) 0%, var(--ext) 50%, var(--ino) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  margin: 0 auto 24px;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2);
+}
+
+.login-box h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--gray-800);
+  margin-bottom: 8px;
+}
+
+.login-box p {
+  color: var(--gray-600);
+  font-size: 14px;
+  margin-bottom: 32px;
+  line-height: 1.7;
+}
+
+.badge-trio {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-ext { background: var(--ext-light); color: var(--ext); }
+.badge-pes { background: var(--pes-light); color: var(--pes); }
+.badge-ino { background: var(--ino-light); color: var(--ino); }
+
+.input-field {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--gray-800);
+  transition: var(--transition);
+  outline: none;
+  background: var(--gray-50);
+  margin-bottom: 12px;
+}
+.input-field:focus { border-color: var(--accent); background: white; }
+
+.btn-primary {
+  width: 100%;
+  padding: 13px 20px;
+  background: linear-gradient(135deg, var(--pes), #1a6fc0);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  letter-spacing: 0.01em;
+}
+.btn-primary:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(26, 95, 160, 0.3); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: white;
+  color: var(--gray-800);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-secondary:hover { background: var(--gray-100); }
+
+.btn-success {
+  padding: 11px 24px;
+  background: linear-gradient(135deg, var(--ext), #1f9467);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-success:hover { opacity: 0.9; }
+
+.msg-info {
+  background: var(--pes-light);
+  color: var(--pes);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+.msg-error {
+  background: #fee;
+  color: #c0392b;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ============================================
+   DASHBOARD SCREEN
+   ============================================ */
+.dash-header {
+  margin-bottom: 28px;
+}
+
+.dash-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+}
+
+.dash-header p {
+  color: var(--gray-600);
+  font-size: 14px;
+}
+
+.dash-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.assessments-list {
+  display: grid;
+  gap: 14px;
+}
+
+.assessment-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow);
+}
+.assessment-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+.assessment-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.icon-ext { background: var(--ext-light); }
+.icon-pes { background: var(--pes-light); }
+.icon-ino { background: var(--ino-light); }
+.icon-hybrid { background: #f0eef8; }
+
+.assessment-card-info { flex: 1; min-width: 0; }
+
+.assessment-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assessment-card-meta {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.assessment-card-score {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray-400);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state p { font-size: 14px; }
+
+/* ============================================
+   FORM SCREEN (the quiz)
+   ============================================ */
+.form-header {
+  margin-bottom: 28px;
+}
+
+.form-header h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.progress-bar-wrap {
+  background: var(--gray-200);
+  border-radius: 4px;
+  height: 5px;
+  margin: 16px 0 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pes), var(--ext));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--gray-400);
+  text-align: right;
+}
+
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 16px;
+}
+
+.block-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--pes-light);
+  color: var(--pes);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.block-badge.b2 { background: #e8f0fe; color: #3d5afe; }
+.block-badge.b3 { background: var(--ino-light); color: var(--ino); }
+.block-badge.b4 { background: #fce4ec; color: #c2185b; }
+.block-badge.b5 { background: #f3e5f5; color: #7b1fa2; }
+
+.block-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* QUESTION CARD */
+.question-item {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+}
+.question-item:focus-within { border-color: #93c5fd; }
+
+.question-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.q-num {
+  width: 24px;
+  height: 24px;
+  background: var(--gray-100);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-600);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.q-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-800);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.q-help {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin: -8px 0 12px 36px;
+  font-style: italic;
+}
+
+.slider-wrap {
+  padding: 4px 0 0 0;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--gray-200);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pes);
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(26, 95, 160, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pes);
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(26, 95, 160, 0.3);
+  cursor: pointer;
+}
+
+.slider-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.slider-value-badge {
+  background: var(--pes);
+  color: white;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 44px;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.slider-desc {
+  font-size: 11px;
+  color: var(--gray-400);
+  flex: 1;
+  text-align: right;
+}
+
+/* Project info form */
+.project-info-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.field-wrap label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+}
+
+.field-wrap .input-field {
+  margin-bottom: 0;
+}
+
+/* Navigation */
+.form-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray-200);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.save-indicator {
+  font-size: 12px;
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.save-indicator.saved { color: var(--ext); }
+.save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-dot 1.5s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ============================================
+   RESULTS SCREEN
+   ============================================ */
+.result-hero {
+  text-align: center;
+  padding: 40px 32px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  border: 1px solid var(--gray-200);
+  position: relative;
+  overflow: hidden;
+}
+
+.result-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background: radial-gradient(circle at 30% 50%, var(--pes), transparent 60%),
+              radial-gradient(circle at 70% 50%, var(--ext), transparent 60%);
+  pointer-events: none;
+}
+
+.result-verdict {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  letter-spacing: 0.03em;
+}
+
+.result-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--gray-800);
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.result-interpretation {
+  font-size: 14px;
+  color: var(--gray-600);
+  max-width: 520px;
+  margin: 0 auto 20px;
+  line-height: 1.7;
+}
+
+/* Scores bar */
+.scores-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.score-row {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+
+.score-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.score-label {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.score-pct {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.score-bar-track {
+  height: 10px;
+  background: var(--gray-100);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.score-bar-fill.ext { background: linear-gradient(90deg, var(--ext), #2db37c); }
+.score-bar-fill.pes { background: linear-gradient(90deg, var(--pes), #2980c8); }
+.score-bar-fill.ino { background: linear-gradient(90deg, var(--ino), #e07a2f); }
+
+/* Chart */
+.chart-wrap {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.chart-wrap h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin-bottom: 16px;
+  color: var(--gray-800);
+}
+
+#radar-chart {
+  max-width: 340px;
+  max-height: 340px;
+  margin: 0 auto;
+}
+
+/* Insights */
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 540px) {
+  .insights-grid { grid-template-columns: 1fr; }
+}
+
+.insight-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.insight-card h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.insight-card h4.h-ext { color: var(--ext); }
+.insight-card h4.h-pes { color: var(--pes); }
+.insight-card h4.h-ino { color: var(--ino); }
+.insight-card h4.h-sugg { color: var(--gray-600); }
+
+.insight-list {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.insight-list li {
+  font-size: 13px;
+  color: var(--gray-600);
+  padding-left: 16px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.insight-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--gray-400);
+}
+
+/* Result actions */
+.result-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray-200);
+}
+
+/* ============================================
+   TOAST
+   ============================================ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--gray-800);
+  color: white;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  z-index: 999;
+  box-shadow: var(--shadow-md);
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  max-width: 320px;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ============================================
+   SPINNER
+   ============================================ */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.app-footer {
+  text-align: center;
+  padding: 32px 20px;
+  font-size: 12px;
+  color: var(--gray-400);
+  border-top: 1px solid var(--gray-200);
+  margin-top: 40px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 600px) {
+  .card { padding: 20px 16px; }
+  .login-box { padding: 36px 24px; }
+  .form-nav { flex-direction: column; }
+  .form-nav > * { width: 100%; }
+  .btn-primary, .btn-secondary, .btn-success { width: 100%; }
+  .result-title { font-size: 20px; }
+}
+
+/* MISC */
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 17px;
+  margin-bottom: 4px;
+  color: var(--gray-800);
+}
+
+.section-sub {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-bottom: 20px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pill-ext { background: var(--ext-light); color: var(--ext); }
+.pill-pes { background: var(--pes-light); color: var(--pes); }
+.pill-ino { background: var(--ino-light); color: var(--ino); }
+.pill-hybrid { background: #f0eef8; color: #6c3fba; }
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="header-logo">⬡</div>
+    <div>
+      <div class="header-title">RADAR DO PROJETO</div>
+      <div class="header-subtitle">PROEXT-PG · UNEMAT · Hub da Pós</div>
+    </div>
+  </div>
+  <div class="header-user" id="header-user" style="display:none">
+    <span id="header-email"></span>
+    <button id="btn-logout">Sair</button>
+  </div>
+</header>
+
+<!-- ============================================================
+     SCREEN: LOGIN
+     ============================================================ -->
+<div id="screen-login" class="screen active">
+  <div class="main-container" style="padding-top:0;padding-bottom:0;max-width:100%">
+    <div class="login-box">
+      <div class="login-hero">⬡</div>
+      <h1>RADAR DO PROJETO</h1>
+      <p>Classifique o perfil do seu projeto em relação a três eixos acadêmicos: <strong>Extensão</strong>, <strong>Pesquisa</strong> e <strong>Inovação</strong>.</p>
+      <div class="badge-trio">
+        <span class="badge badge-ext">🌿 Extensao</span>
+        <span class="badge badge-pes">🔬 Pesquisa</span>
+        <span class="badge badge-ino">⚙️ Inovacao</span>
+      </div>
+      <input type="email" id="login-email" class="input-field" placeholder="Seu e-mail institucional" autocomplete="email">
+      <button id="btn-send-link" class="btn-primary" onclick="sendMagicLink()">Entrar com link de acesso</button>
+      <div id="msg-link-sent" class="msg-info">
+        ✉️ Link enviado! Verifique sua caixa de e-mail e clique no link para entrar.
+      </div>
+      <div id="msg-login-error" class="msg-error"></div>
+      <div style="margin-top:20px;font-size:12px;color:var(--gray-400)">
+        Voce recebera um link de acesso seguro. Não é necessario criar senha.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: DASHBOARD
+     ============================================================ -->
+<div id="screen-dashboard" class="screen">
+  <div class="main-container">
+    <div class="dash-header">
+      <h2 class="section-heading">Suas Avaliações</h2>
+      <p>Gerencie os projetos que você já avaliou ou inicie uma nova avaliação.</p>
+    </div>
+
+    <div class="dash-actions">
+      <button class="btn-primary" style="width:auto;padding:11px 24px" onclick="startNewAssessment()">
+        + Nova avaliação
+      </button>
+    </div>
+
+    <div id="assessments-list" class="assessments-list">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>Nenhuma avaliação encontrada. Comece criando uma nova avaliação.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: FORM (quiz)
+     ============================================================ -->
+<div id="screen-form" class="screen">
+  <div class="main-container">
+
+    <div class="form-header">
+      <h2 class="section-heading" id="form-title">Nova Avaliação</h2>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill" style="width:5%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">Informações do projeto</div>
+    </div>
+
+    <!-- STEP 0: Project Info -->
+    <div id="step-0" class="form-step">
+      <div class="card">
+        <h3 class="section-heading" style="margin-bottom:4px">Informações do Projeto</h3>
+        <p class="section-sub">Preencha os dados básicos antes de iniciar a avaliação.</p>
+        <div class="project-info-grid">
+          <div class="field-wrap">
+            <label for="proj-title">Título do projeto <span style="color:#c00">*</span></label>
+            <input type="text" id="proj-title" class="input-field" placeholder="Título ou nome do projeto">
+          </div>
+          <div class="field-wrap">
+            <label for="proj-author">Nome do responsável (opcional)</label>
+            <input type="text" id="proj-author" class="input-field" placeholder="Seu nome">
+          </div>
+          <div class="field-wrap">
+            <label for="proj-area">Área temática (opcional)</label>
+            <input type="text" id="proj-area" class="input-field" placeholder="Ex: Ecologia, Saude, Educacao...">
+          </div>
+          <div class="field-wrap">
+            <label for="proj-desc">Descrição breve (opcional)</label>
+            <textarea id="proj-desc" class="input-field" rows="3" placeholder="Descreva brevemente o que este projeto se propõe a fazer..." style="resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="form-nav">
+        <button class="btn-secondary" onclick="showDashboard()">Cancelar</button>
+        <button class="btn-primary" style="width:auto;padding:11px 24px" onclick="goToStep(1)">Iniciar avaliação →</button>
+      </div>
+    </div>
+
+    <!-- STEPS 1-5: Questions will be injected by JS -->
+    <div id="step-questions"></div>
+
+    <!-- STEP 6: Review -->
+    <div id="step-6" class="form-step" style="display:none">
+      <div class="card">
+        <h3 class="section-heading" style="margin-bottom:4px">Revisão final</h3>
+        <p class="section-sub">Confira suas respostas antes de calcular o resultado.</p>
+        <div id="review-content"></div>
+      </div>
+      <div class="form-nav">
+        <button class="btn-secondary" onclick="goToStep(5)">← Voltar</button>
+        <div class="nav-right">
+          <span class="save-indicator saved" id="save-indicator-review">
+            <span class="save-dot"></span> Salvo automaticamente
+          </span>
+          <button class="btn-success" onclick="calculateAndShowResults()">Calcular resultado →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: RESULTS
+     ============================================================ -->
+<div id="screen-results" class="screen">
+  <div class="main-container">
+
+    <!-- Hero -->
+    <div class="result-hero card" id="result-hero">
+      <div id="result-verdict-badge" class="result-verdict">...</div>
+      <div id="result-title" class="result-title">Calculando...</div>
+      <div id="result-interp" class="result-interpretation"></div>
+      <div style="font-size:13px;color:var(--gray-400)" id="result-meta"></div>
+    </div>
+
+    <!-- Scores -->
+    <div class="scores-grid" id="scores-grid"></div>
+
+    <!-- Chart -->
+    <div class="chart-wrap">
+      <h3>Perfil Radar do Projeto</h3>
+      <canvas id="radar-chart"></canvas>
+    </div>
+
+    <!-- Insights -->
+    <div class="insights-grid" id="insights-grid"></div>
+
+    <!-- Actions -->
+    <div class="card card-sm">
+      <div class="result-actions">
+        <button class="btn-success" onclick="showDashboard()">← Voltar ao painel</button>
+        <button class="btn-secondary" onclick="exportJSON()">Exportar JSON</button>
+        <button class="btn-secondary" onclick="copyResultText()">Copiar resultado</button>
+        <button class="btn-secondary" onclick="startNewAssessment()">Nova avaliação</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- FOOTER -->
+<footer class="app-footer">
+  RADAR DO PROJETO · PROEXT-PG · UNEMAT · Cáceres-MT<br>
+  Dados armazenados com segurança no Firebase. Uso restrito ao Hub da Pós-Graduação.
+</footer>
+
+<!-- ============================================================
+     FIREBASE CONFIG — SUBSTITUA PELOS SEUS DADOS
+     ============================================================ -->
+<script>
+// =========================================================
+// FIREBASE CONFIGURATION
+// Substitua pelo seu projeto no Firebase Console:
+// https://console.firebase.google.com
+// =========================================================
+const FIREBASE_CONFIG = {
+  apiKey: "SUA_API_KEY_AQUI",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO_ID",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID"
+};
+
+// URL que o Firebase usa para redirecionar após autenticação por magic link
+// Deve ser o mesmo dominio onde o app esta hospedado
+const MAGIC_LINK_URL = window.location.href;
+
+// =========================================================
+// INICIALIZACAO FIREBASE
+// =========================================================
+let db = null;
+let auth = null;
+let currentUser = null;
+let fbAvailable = false;
+
+try {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  fbAvailable = true;
+} catch(e) {
+  console.warn("Firebase não inicializado. Usando modo local.", e);
+}
+
+// =========================================================
+// MODELO DE AVALIACAO
+// 20 perguntas em 5 blocos
+// Cada pergunta tem: texto, ajuda, pesos [EXT, PES, INO]
+// =========================================================
+const MODEL_VERSION = "1.0";
+
+const BLOCKS = [
+  {
+    id: 1,
+    name: "Relação com a Sociedade",
+    icon: "🤝",
+    color: "b1",
+    questions: [
+      {
+        id: "q01",
+        text: "O projeto envolve diretamente uma comunidade ou populacao externa a universidade?",
+        help: "Considere se há participantes, beneficiários ou parceiros fora do ambiente acadêmico.",
+        weights: { ext: 1.0, pes: 0.1, ino: 0.3 }
+      },
+      {
+        id: "q02",
+        text: "Há troca ou construção conjunta de saberes entre universidade e comunidade?",
+        help: "O conhecimento é produzido em parceria, não apenas transferido pela universidade.",
+        weights: { ext: 1.0, pes: 0.2, ino: 0.2 }
+      },
+      {
+        id: "q03",
+        text: "O impacto esperado e imediato, local e diretamente aplicado na realidade das pessoas?",
+        help: "O retorno não é apenas teórico ou de longo prazo, mas visível na vida das pessoas.",
+        weights: { ext: 0.9, pes: 0.1, ino: 0.4 }
+      },
+      {
+        id: "q04",
+        text: "O projeto promove formação, capacitação, intervenção ou transformação social?",
+        help: "Ex: cursos, oficinas, atendimentos, ações comunitárias, intervenções culturais ou ambientais.",
+        weights: { ext: 1.0, pes: 0.1, ino: 0.3 }
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: "Produção de Conhecimento",
+    icon: "🔬",
+    color: "b2",
+    questions: [
+      {
+        id: "q05",
+        text: "O projeto parte de uma pergunta científica clara ou hipótese testável?",
+        help: "Há um problema de investigação definido, com uma pergunta que orienta todo o trabalho.",
+        weights: { ext: 0.1, pes: 1.0, ino: 0.3 }
+      },
+      {
+        id: "q06",
+        text: "Há coleta e análise sistemática de dados com método formal definido?",
+        help: "O projeto usa métodos de pesquisa: amostragem, instrumentos, protocolos, análise estatística etc.",
+        weights: { ext: 0.1, pes: 1.0, ino: 0.3 }
+      },
+      {
+        id: "q07",
+        text: "O projeto tem potencial de gerar publicação, relatório científico ou avanço teórico?",
+        help: "O resultado pode se transformar em artigo, dissertação, tese ou outro produto científico.",
+        weights: { ext: 0.2, pes: 1.0, ino: 0.3 }
+      },
+      {
+        id: "q08",
+        text: "Há revisão de literatura ou fundamentacao teorica como base central do projeto?",
+        help: "O projeto parte de um referencial teórico sólido e dialogando com produção acadêmica existente.",
+        weights: { ext: 0.1, pes: 0.9, ino: 0.2 }
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: "Potencial Tecnológico e de Inovação",
+    icon: "⚙️",
+    color: "b3",
+    questions: [
+      {
+        id: "q09",
+        text: "O projeto cria ou adapta um produto, processo, servico ou tecnologia nova?",
+        help: "Há uma criacao original — um app, ferramenta, metodologia, protocolo, equipamento, produto.",
+        weights: { ext: 0.2, pes: 0.3, ino: 1.0 }
+      },
+      {
+        id: "q10",
+        text: "Há prototipagem, desenvolvimento técnico ou engenharia de solução prevista?",
+        help: "O projeto constrói algo físico, digital ou metodológico de forma técnica e estruturada.",
+        weights: { ext: 0.1, pes: 0.3, ino: 1.0 }
+      },
+      {
+        id: "q11",
+        text: "O projeto pode ser escalado, replicado ou transferido para outros contextos ou regioes?",
+        help: "A solução ou aprendizado pode funcionar além do contexto original.",
+        weights: { ext: 0.3, pes: 0.2, ino: 0.9 }
+      },
+      {
+        id: "q12",
+        text: "Há potencial de uso por organizações externas, mercado ou implementacao institucional?",
+        help: "O resultado pode ser adotado por prefeituras, empresas, ONGs, secretarias, outras instituicoes.",
+        weights: { ext: 0.2, pes: 0.1, ino: 0.9 }
+      }
+    ]
+  },
+  {
+    id: 4,
+    name: "Foco e Impacto Central",
+    icon: "🎯",
+    color: "b4",
+    questions: [
+      {
+        id: "q13",
+        text: "O foco central do projeto e transformar uma realidade social concreta?",
+        help: "O objetivo principal é mudar uma situação real — não apenas estuda-la ou construir uma ferramenta.",
+        weights: { ext: 1.0, pes: 0.1, ino: 0.4 }
+      },
+      {
+        id: "q14",
+        text: "O foco central é compreender um fenômeno natural, social, biológico ou científico?",
+        help: "O objetivo principal é gerar conhecimento e entendimento sobre algo, não necessariamente transforma-lo.",
+        weights: { ext: 0.2, pes: 1.0, ino: 0.2 }
+      },
+      {
+        id: "q15",
+        text: "O foco central e desenvolver ou adaptar uma solução prática para um problema existente?",
+        help: "O projeto visa entregar algo funcional, aplicável e testável para resolver um problema.",
+        weights: { ext: 0.3, pes: 0.3, ino: 1.0 }
+      },
+      {
+        id: "q16",
+        text: "O público beneficiário participa ativamente da construcao ou execucao das acoes?",
+        help: "As pessoas não são apenas objeto de estudo ou destinatarias passivas — elas co-constroem.",
+        weights: { ext: 1.0, pes: 0.2, ino: 0.3 }
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: "Transferência e Sustentabilidade",
+    icon: "🔁",
+    color: "b5",
+    questions: [
+      {
+        id: "q17",
+        text: "O projeto depende fortemente de método científico rigoroso para ser válido?",
+        help: "A validade dos resultados exige controle experimental, amostragem, reprodutibilidade.",
+        weights: { ext: 0.1, pes: 1.0, ino: 0.3 }
+      },
+      {
+        id: "q18",
+        text: "O projeto gera ganho de eficiencia, melhoria de processo ou reducao de custos operacionais?",
+        help: "Há lógica de otimizacao, desburocratizacao ou melhoria funcional em algum sistema.",
+        weights: { ext: 0.2, pes: 0.2, ino: 1.0 }
+      },
+      {
+        id: "q19",
+        text: "Há retorno social claro e mensurável para a comunidade envolvida?",
+        help: "É possível indicar o que a comunidade ganha de concreto com este projeto.",
+        weights: { ext: 0.9, pes: 0.2, ino: 0.3 }
+      },
+      {
+        id: "q20",
+        text: "O projeto produz conhecimento que pode ser sistematizado e transmitido a outras pessoas?",
+        help: "Os aprendizados podem virar material de ensino, guia, manual, curso, metodologia documentada.",
+        weights: { ext: 0.5, pes: 0.7, ino: 0.5 }
+      }
+    ]
+  }
+];
+
+// Pré-computar máximos para normalização
+function computeMaxScores() {
+  const max = { ext: 0, pes: 0, ino: 0 };
+  BLOCKS.forEach(b => b.questions.forEach(q => {
+    max.ext += 10 * q.weights.ext;
+    max.pes += 10 * q.weights.pes;
+    max.ino += 10 * q.weights.ino;
+  }));
+  return max;
+}
+
+const MAX_SCORES = computeMaxScores();
+
+// =========================================================
+// STATE
+// =========================================================
+let currentAssessmentId = null;
+let currentResponses = {};     // { q01: 5, q02: 3, ... }
+let currentProjectInfo = {};
+let currentStep = 0;
+let radarChart = null;
+let allAssessments = [];
+let saveTimeout = null;
+
+// =========================================================
+// APP INIT
+// =========================================================
+window.onload = function() {
+  // Verificar magic link no URL
+  if (fbAvailable && firebase.auth().isSignInWithEmailLink(window.location.href)) {
+    let email = window.localStorage.getItem('emailForSignIn');
+    if (!email) {
+      email = window.prompt('Por favor, informe seu e-mail para confirmar o acesso:');
+    }
+    if (email) {
+      firebase.auth().signInWithEmailLink(email, window.location.href)
+        .then(() => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.history.replaceState({}, '', window.location.pathname);
+        })
+        .catch(err => showToast('Erro ao entrar: ' + err.message));
+    }
+  }
+
+  if (fbAvailable) {
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        onUserLoggedIn(user);
+      } else {
+        currentUser = null;
+        showScreen('login');
+        document.getElementById('header-user').style.display = 'none';
+      }
+    });
+  }
+
+  // Inicializar sliders na tela de formulario
+  buildFormSteps();
+};
+
+// =========================================================
+// AUTH
+// =========================================================
+function sendMagicLink() {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email || !email.includes('@')) {
+    showError('msg-login-error', 'Por favor, informe um e-mail válido.');
+    return;
+  }
+  document.getElementById('btn-send-link').disabled = true;
+  document.getElementById('btn-send-link').innerHTML = '<span class="spinner"></span> Enviando...';
+
+  if (!fbAvailable) {
+    // Modo de demonstracao sem Firebase
+    window.localStorage.setItem('demoUser', email);
+    currentUser = { email, uid: 'local_' + email };
+    onUserLoggedIn(currentUser);
+    return;
+  }
+
+  const actionCodeSettings = {
+    url: MAGIC_LINK_URL,
+    handleCodeInApp: true
+  };
+
+  auth.sendSignInLinkToEmail(email, actionCodeSettings)
+    .then(() => {
+      window.localStorage.setItem('emailForSignIn', email);
+      document.getElementById('msg-link-sent').style.display = 'block';
+      document.getElementById('btn-send-link').innerHTML = 'Link enviado';
+    })
+    .catch(err => {
+      showError('msg-login-error', 'Erro: ' + err.message);
+      document.getElementById('btn-send-link').disabled = false;
+      document.getElementById('btn-send-link').innerHTML = 'Entrar com link de acesso';
+    });
+}
+
+function onUserLoggedIn(user) {
+  document.getElementById('header-user').style.display = 'flex';
+  document.getElementById('header-email').textContent = user.email;
+  document.getElementById('btn-logout').onclick = logout;
+  loadAssessments();
+  showScreen('dashboard');
+}
+
+function logout() {
+  if (fbAvailable && auth.currentUser) {
+    auth.signOut();
+  } else {
+    window.localStorage.removeItem('demoUser');
+    currentUser = null;
+    showScreen('login');
+    document.getElementById('header-user').style.display = 'none';
+  }
+}
+
+// =========================================================
+// NAVIGATION
+// =========================================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+function showDashboard() {
+  loadAssessments();
+  showScreen('dashboard');
+}
+
+// =========================================================
+// BUILD FORM STEPS (render sliders)
+// =========================================================
+function buildFormSteps() {
+  const container = document.getElementById('step-questions');
+  container.innerHTML = '';
+
+  BLOCKS.forEach((block, bIdx) => {
+    const stepNum = bIdx + 1;
+    const div = document.createElement('div');
+    div.id = 'step-' + stepNum;
+    div.className = 'form-step';
+    div.style.display = 'none';
+
+    let html = `<div class="block-title">
+      <div class="block-badge ${block.color}">${block.icon}</div>
+      <div class="block-name">Bloco ${stepNum} — ${block.name}</div>
+    </div>`;
+
+    block.questions.forEach((q, qIdx) => {
+      const globalIdx = BLOCKS.slice(0, bIdx).reduce((acc, b) => acc + b.questions.length, 0) + qIdx + 1;
+      html += `
+      <div class="question-item" id="qi-${q.id}">
+        <div class="question-header">
+          <div class="q-num">Q${globalIdx}</div>
+          <div class="q-text">${q.text}</div>
+        </div>
+        <div class="q-help">${q.help}</div>
+        <div class="slider-wrap">
+          <div class="slider-labels">
+            <span>0 — Nada presente</span>
+            <span>5 — Moderado</span>
+            <span>10 — Fortemente presente</span>
+          </div>
+          <input type="range" min="0" max="10" value="5" step="1"
+            id="slider-${q.id}"
+            oninput="onSliderChange('${q.id}', this.value)">
+          <div class="slider-value-row">
+            <span class="slider-desc" id="desc-${q.id}">${getSliderDesc(5)}</span>
+            <span class="slider-value-badge" id="badge-${q.id}">5</span>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Navigation buttons for this step
+    const isLast = stepNum === BLOCKS.length;
+    html += `<div class="form-nav">
+      <button class="btn-secondary" onclick="goToStep(${stepNum - 1})">← Voltar</button>
+      <div class="nav-right">
+        <span class="save-indicator" id="save-indicator-${stepNum}">Salvando...</span>
+        <button class="${isLast ? 'btn-success' : 'btn-primary'}" style="${isLast ? '' : 'width:auto;padding:11px 24px'}" onclick="goToStep(${isLast ? 6 : stepNum + 1})">
+          ${isLast ? 'Revisar respostas →' : 'Próximo →'}
+        </button>
+      </div>
+    </div>`;
+
+    div.innerHTML = html;
+    container.appendChild(div);
+  });
+}
+
+function getSliderDesc(v) {
+  v = parseInt(v);
+  if (v === 0) return "Não se aplica";
+  if (v <= 2) return "Pouco presente";
+  if (v <= 4) return "Levemente presente";
+  if (v === 5) return "Moderadamente presente";
+  if (v <= 7) return "Bastante presente";
+  if (v <= 9) return "Muito presente";
+  return "Totalmente presente";
+}
+
+function onSliderChange(qId, value) {
+  value = parseInt(value);
+  const badge = document.getElementById('badge-' + qId);
+  const desc = document.getElementById('desc-' + qId);
+  if (badge) badge.textContent = value;
+  if (desc) desc.textContent = getSliderDesc(value);
+  // Color feedback
+  if (badge) {
+    if (value <= 3) badge.style.background = 'var(--gray-400)';
+    else if (value <= 6) badge.style.background = 'var(--pes)';
+    else badge.style.background = 'var(--ext)';
+  }
+  currentResponses[qId] = value;
+  scheduleSave();
+}
+
+// =========================================================
+// STEP NAVIGATION
+// =========================================================
+function goToStep(step) {
+  if (step === 1) {
+    // Validate project info
+    const title = document.getElementById('proj-title').value.trim();
+    if (!title) {
+      document.getElementById('proj-title').focus();
+      showToast('Por favor, informe o título do projeto.');
+      return;
+    }
+    currentProjectInfo = {
+      title: title,
+      author: document.getElementById('proj-author').value.trim(),
+      area: document.getElementById('proj-area').value.trim(),
+      description: document.getElementById('proj-desc').value.trim()
+    };
+  }
+
+  // Hide all steps
+  document.querySelectorAll('.form-step').forEach(s => s.style.display = 'none');
+
+  if (step === 0) {
+    document.getElementById('step-0').style.display = 'block';
+    updateProgress(0);
+  } else if (step >= 1 && step <= BLOCKS.length) {
+    document.getElementById('step-' + step).style.display = 'block';
+    updateProgress(step);
+    // Load saved responses into sliders
+    loadResponsesIntoSliders(step);
+  } else if (step === 6) {
+    document.getElementById('step-6').style.display = 'block';
+    buildReview();
+    updateProgress(6);
+  }
+
+  currentStep = step;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function loadResponsesIntoSliders(step) {
+  const block = BLOCKS[step - 1];
+  if (!block) return;
+  block.questions.forEach(q => {
+    const slider = document.getElementById('slider-' + q.id);
+    if (slider) {
+      const val = currentResponses[q.id] !== undefined ? currentResponses[q.id] : 5;
+      slider.value = val;
+      onSliderChange(q.id, val);
+    }
+  });
+}
+
+function updateProgress(step) {
+  const total = BLOCKS.length + 2; // 0 = info, 1-5 = blocks, 6 = review
+  const pct = Math.max(5, Math.round((step / (total - 1)) * 100));
+  document.getElementById('progress-fill').style.width = pct + '%';
+  const labels = ['Informações do projeto', 'Relação com a Sociedade', 'Produção de Conhecimento', 'Potencial Tecnológico', 'Foco e Impacto', 'Transferência', 'Revisão final'];
+  document.getElementById('progress-label').textContent = (labels[step] || '') + ' (' + pct + '%)';
+}
+
+// =========================================================
+// REVIEW STEP
+// =========================================================
+function buildReview() {
+  let html = '';
+  BLOCKS.forEach((block, bIdx) => {
+    html += `<div style="margin-bottom:20px">
+      <div style="font-weight:700;font-size:13px;color:var(--gray-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--gray-200)">${block.icon} ${block.name}</div>
+      <div style="display:grid;gap:8px">`;
+    block.questions.forEach((q, qIdx) => {
+      const globalIdx = BLOCKS.slice(0, bIdx).reduce((acc, b) => acc + b.questions.length, 0) + qIdx + 1;
+      const val = currentResponses[q.id] !== undefined ? currentResponses[q.id] : 5;
+      const pct = val * 10;
+      html += `<div style="display:flex;align-items:center;gap:12px;font-size:13px">
+        <span style="color:var(--gray-400);min-width:24px;font-size:11px;font-weight:700">Q${globalIdx}</span>
+        <span style="flex:1;color:var(--gray-700);line-height:1.4">${q.text}</span>
+        <span style="font-weight:700;color:${val >= 7 ? 'var(--ext)' : val >= 4 ? 'var(--pes)' : 'var(--gray-400)'};min-width:20px;text-align:right">${val}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  document.getElementById('review-content').innerHTML = html;
+}
+
+// =========================================================
+// SCORING ENGINE
+// =========================================================
+function calculateScores(responses) {
+  let raw = { ext: 0, pes: 0, ino: 0 };
+
+  BLOCKS.forEach(block => {
+    block.questions.forEach(q => {
+      const v = responses[q.id] !== undefined ? responses[q.id] : 5;
+      raw.ext += v * q.weights.ext;
+      raw.pes += v * q.weights.pes;
+      raw.ino += v * q.weights.ino;
+    });
+  });
+
+  const pct = {
+    ext: Math.round((raw.ext / MAX_SCORES.ext) * 100),
+    pes: Math.round((raw.pes / MAX_SCORES.pes) * 100),
+    ino: Math.round((raw.ino / MAX_SCORES.ino) * 100)
+  };
+
+  return { raw, pct };
+}
+
+function classifyProject(pct) {
+  const vals = [
+    { key: 'ext', label: 'Extensao', pct: pct.ext },
+    { key: 'pes', label: 'Pesquisa', pct: pct.pes },
+    { key: 'ino', label: 'Inovacao', pct: pct.ino }
+  ].sort((a, b) => b.pct - a.pct);
+
+  const [first, second, third] = vals;
+  const diff12 = first.pct - second.pct;
+  const diff13 = first.pct - third.pct;
+  const maxVal = first.pct;
+
+  let classification, label, type;
+
+  if (maxVal < 35) {
+    classification = 'Baixa definição conceitual';
+    label = 'Projeto não suficientemente definido';
+    type = 'undefined';
+  } else if (diff12 > 15 && maxVal > 55) {
+    classification = 'Predominantemente ' + first.label;
+    label = first.label;
+    type = first.key;
+  } else if (diff12 > 5 && diff12 <= 15) {
+    classification = 'Híbrido ' + first.label + '/' + second.label + ' (tendencia a ' + first.label + ')';
+    label = first.label + '/' + second.label;
+    type = 'hybrid-' + first.key;
+  } else if (diff13 <= 10) {
+    classification = 'Projeto integrado: ' + vals.map(v => v.label).join(' + ');
+    label = 'Integrado';
+    type = 'integrated';
+  } else {
+    classification = 'Híbrido ' + first.label + '/' + second.label;
+    label = first.label + '/' + second.label;
+    type = 'hybrid-' + first.key;
+  }
+
+  return { classification, label, type, ranked: vals };
+}
+
+function generateInsights(pct, responses, ranked) {
+  const strong = [];
+  const suggestions = [];
+
+  // Analisar pontos fortes por bloco
+  BLOCKS.forEach(block => {
+    let blockScore = 0;
+    block.questions.forEach(q => {
+      blockScore += (responses[q.id] || 5);
+    });
+    const avg = blockScore / block.questions.length;
+    if (avg >= 7) strong.push(block.name + ' (' + block.icon + ')');
+  });
+
+  // Sugestões baseadas em eixos mais fracos
+  const weakAxis = ranked[ranked.length - 1];
+  if (weakAxis.key === 'ext' && weakAxis.pct < 40) {
+    suggestions.push('Integre comunidades externas ao design ou execução do projeto.');
+    suggestions.push('Estabeleça retorno social mensurável para os beneficiários.');
+  } else if (weakAxis.key === 'pes' && weakAxis.pct < 40) {
+    suggestions.push('Formalize uma pergunta de investigação ou hipótese de pesquisa.');
+    suggestions.push('Inclua metodologia sistemática de coleta e análise de dados.');
+  } else if (weakAxis.key === 'ino' && weakAxis.pct < 40) {
+    suggestions.push('Explore a criação de um produto, metodologia ou ferramenta aplicada.');
+    suggestions.push('Avalie o potencial de escalabilidade ou replicação da solução.');
+  }
+
+  // Sugestao para eixo intermediario
+  const midAxis = ranked[1];
+  if (midAxis.pct > 40 && midAxis.pct < 55) {
+    if (midAxis.key === 'ext') suggestions.push('Amplie o engajamento comunitário para consolidar o perfil de extensão.');
+    if (midAxis.key === 'pes') suggestions.push('Fortaleça o rigor metodológico para qualificar o componente de pesquisa.');
+    if (midAxis.key === 'ino') suggestions.push('Desenvolva um protótipo ou solução concreta para reforçar a inovação.');
+  }
+
+  return {
+    strong: strong.length > 0 ? strong : ['Projeto com distribuição equilibrada entre os eixos'],
+    suggestions: suggestions.length > 0 ? suggestions : ['Mantenha o equilibrio entre os três eixos para um projeto integrado robusto.']
+  };
+}
+
+// =========================================================
+// CALCULATE AND SHOW RESULTS
+// =========================================================
+function calculateAndShowResults() {
+  const { raw, pct } = calculateScores(currentResponses);
+  const { classification, label, type, ranked } = classifyProject(pct);
+  const { strong, suggestions } = generateInsights(pct, currentResponses, ranked);
+
+  const result = {
+    assessmentId: currentAssessmentId,
+    userEmail: currentUser.email,
+    projectTitle: currentProjectInfo.title || 'Projeto sem título',
+    projectInfo: currentProjectInfo,
+    responses: { ...currentResponses },
+    computedScores: { raw, pct },
+    classification: { text: classification, label, type },
+    insights: { strong, suggestions },
+    modelVersion: MODEL_VERSION,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  // Salvar no Firebase
+  saveAssessmentToFirebase(result);
+
+  // Salvar localmente
+  saveToLocalStorage(result);
+
+  // Exibir resultado
+  renderResults(result, ranked, pct);
+  showScreen('results');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// =========================================================
+// RENDER RESULTS
+// =========================================================
+function renderResults(result, ranked, pct) {
+  const { classification, type } = result.classification;
+
+  // Hero
+  const verdictEl = document.getElementById('result-verdict-badge');
+  verdictEl.textContent = classification;
+  if (type.startsWith('ext')) { verdictEl.style.background = 'var(--ext-light)'; verdictEl.style.color = 'var(--ext)'; }
+  else if (type.startsWith('pes')) { verdictEl.style.background = 'var(--pes-light)'; verdictEl.style.color = 'var(--pes)'; }
+  else if (type.startsWith('ino')) { verdictEl.style.background = 'var(--ino-light)'; verdictEl.style.color = 'var(--ino)'; }
+  else { verdictEl.style.background = '#f0eef8'; verdictEl.style.color = '#6c3fba'; }
+
+  document.getElementById('result-title').textContent = '"' + result.projectTitle + '"';
+  document.getElementById('result-interp').textContent = buildInterpretationText(type, ranked, pct);
+  document.getElementById('result-meta').textContent = 'Avaliado em ' + new Date().toLocaleDateString('pt-BR') + ' · Modelo v' + MODEL_VERSION;
+
+  // Scores
+  const colors = { ext: 'var(--ext)', pes: 'var(--pes)', ino: 'var(--ino)' };
+  const labels = { ext: '🌿 Extensao', pes: '🔬 Pesquisa', ino: '⚙️ Inovacao' };
+  const grid = document.getElementById('scores-grid');
+  grid.innerHTML = ['ext', 'pes', 'ino'].map(k => `
+    <div class="score-row">
+      <div class="score-row-header">
+        <div class="score-label">
+          <div class="score-dot" style="background:${colors[k]}"></div>
+          ${labels[k]}
+        </div>
+        <div class="score-pct" style="color:${colors[k]}">${pct[k]}%</div>
+      </div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill ${k}" style="width:0%" id="bar-${k}"></div>
+      </div>
+    </div>`).join('');
+
+  // Animate bars
+  setTimeout(() => {
+    ['ext', 'pes', 'ino'].forEach(k => {
+      document.getElementById('bar-' + k).style.width = pct[k] + '%';
+    });
+  }, 200);
+
+  // Radar Chart
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Extensao', 'Pesquisa', 'Inovacao'],
+      datasets: [{
+        data: [pct.ext, pct.pes, pct.ino],
+        backgroundColor: 'rgba(37, 99, 235, 0.12)',
+        borderColor: '#2563eb',
+        borderWidth: 2.5,
+        pointBackgroundColor: ['#1a7f5a', '#1a5fa0', '#c45c00'],
+        pointRadius: 7,
+        pointHoverRadius: 9
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { stepSize: 25, font: { size: 11 } },
+          pointLabels: { font: { size: 13, weight: '600' } },
+          grid: { color: 'rgba(0,0,0,0.07)' }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Insights
+  const insightsGrid = document.getElementById('insights-grid');
+  insightsGrid.innerHTML = `
+    <div class="insight-card">
+      <h4 class="h-ext">Pontos fortes detectados</h4>
+      <ul class="insight-list">
+        ${result.insights.strong.map(s => `<li>${s}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="insight-card">
+      <h4 class="h-sugg">Sugestões de fortalecimento</h4>
+      <ul class="insight-list">
+        ${result.insights.suggestions.map(s => `<li>${s}</li>`).join('')}
+      </ul>
+    </div>`;
+}
+
+function buildInterpretationText(type, ranked, pct) {
+  const [first, second] = ranked;
+  if (type === 'undefined') return 'As respostas não mostram um perfil definido. Revisar o escopo do projeto pode ajudar a clarificar seu enquadramento.';
+  if (type === 'integrated') return `Este projeto apresenta um perfil equilibrado entre os três eixos (${pct.ext}% Extensao, ${pct.pes}% Pesquisa, ${pct.ino}% Inovacao), caracterizando uma proposta integrada que combina impacto social, rigor científico e solução aplicada.`;
+  if (type.startsWith('hybrid')) return `Este projeto e hibrido, com predominancia em ${first.label} (${first.pct}%) e forte componente de ${second.label} (${second.pct}%), o que indica uma proposta que une essas duas dimensoes de forma significativa.`;
+  return `Este projeto apresenta perfil predominantemente de ${first.label} (${first.pct}%), com caracteristicas marcantes de impacto, metodo e foco alinhados a esse eixo.`;
+}
+
+// =========================================================
+// FIREBASE PERSISTENCE
+// =========================================================
+function saveAssessmentToFirebase(result) {
+  if (!fbAvailable || !currentUser) return;
+  const ref = db.collection('users').doc(currentUser.uid)
+               .collection('assessments').doc(result.assessmentId || generateId());
+  result.assessmentId = ref.id;
+  ref.set(result, { merge: true })
+    .then(() => showToast('Resultado salvo na nuvem.'))
+    .catch(e => console.warn('Erro Firebase:', e));
+}
+
+function loadAssessments() {
+  const list = document.getElementById('assessments-list');
+  if (!fbAvailable || !currentUser) {
+    renderAssessmentsFromLocal(list);
+    return;
+  }
+  db.collection('users').doc(currentUser.uid)
+    .collection('assessments')
+    .orderBy('updatedAt', 'desc')
+    .limit(20)
+    .get()
+    .then(snap => {
+      allAssessments = snap.docs.map(d => d.data());
+      renderAssessmentCards(list, allAssessments);
+    })
+    .catch(() => renderAssessmentsFromLocal(list));
+}
+
+function renderAssessmentsFromLocal(list) {
+  const local = getLocalAssessments();
+  allAssessments = local;
+  renderAssessmentCards(list, local);
+}
+
+function renderAssessmentCards(container, items) {
+  if (!items || items.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>Nenhuma avaliação ainda. Comece criando uma nova avaliação.</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(a => {
+    const type = a.classification?.type || 'unknown';
+    const iconMap = { ext: '🌿', pes: '🔬', ino: '⚙️' };
+    const colorMap = { ext: 'icon-ext', pes: 'icon-pes', ino: 'icon-ino' };
+    const pct = a.computedScores?.pct || {};
+    const topKey = type.replace('hybrid-', '').replace('predominant-', '');
+    const icon = iconMap[topKey] || '📊';
+    const colorClass = colorMap[topKey] || 'icon-hybrid';
+    const date = a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('pt-BR') : '';
+    const topLabel = a.classification?.label || '—';
+    const scoreText = pct.ext !== undefined ? `EXT ${pct.ext}% · PES ${pct.pes}% · INO ${pct.ino}%` : '';
+
+    return `<div class="assessment-card" onclick="viewAssessment('${a.assessmentId}')">
+      <div class="assessment-card-icon ${colorClass}">${icon}</div>
+      <div class="assessment-card-info">
+        <div class="assessment-card-title">${a.projectTitle || 'Projeto sem título'}</div>
+        <div class="assessment-card-meta">${scoreText} · ${date}</div>
+      </div>
+      <span class="assessment-card-score pill ${colorClass.replace('icon-', 'pill-')}">${topLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+function viewAssessment(id) {
+  const a = allAssessments.find(x => x.assessmentId === id);
+  if (!a) return;
+  // Repopulate form and show results
+  currentAssessmentId = a.assessmentId;
+  currentProjectInfo = a.projectInfo || { title: a.projectTitle };
+  currentResponses = { ...a.responses };
+  const { pct } = a.computedScores;
+  const { ranked } = (() => {
+    const vals = [
+      { key: 'ext', label: 'Extensao', pct: pct.ext },
+      { key: 'pes', label: 'Pesquisa', pct: pct.pes },
+      { key: 'ino', label: 'Inovacao', pct: pct.ino }
+    ].sort((a, b) => b.pct - a.pct);
+    return { ranked: vals };
+  })();
+  renderResults(a, ranked, pct);
+  showScreen('results');
+}
+
+// =========================================================
+// NEW ASSESSMENT
+// =========================================================
+function startNewAssessment() {
+  currentAssessmentId = generateId();
+  currentResponses = {};
+  currentProjectInfo = {};
+  document.getElementById('proj-title').value = '';
+  document.getElementById('proj-author').value = '';
+  document.getElementById('proj-area').value = '';
+  document.getElementById('proj-desc').value = '';
+  document.getElementById('form-title').textContent = 'Nova Avaliação';
+  showScreen('form');
+  goToStep(0);
+}
+
+// =========================================================
+// AUTO-SAVE (localStorage + Firebase debounced)
+// =========================================================
+function scheduleSave() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    saveDraft();
+  }, 1200);
+}
+
+function saveDraft() {
+  const draft = {
+    assessmentId: currentAssessmentId,
+    projectInfo: currentProjectInfo,
+    responses: { ...currentResponses },
+    savedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem('radar_draft_' + (currentUser?.email || 'anon'), JSON.stringify(draft));
+  } catch(e) {}
+  // Update save indicator
+  document.querySelectorAll('.save-indicator').forEach(el => {
+    el.className = 'save-indicator saved';
+    el.innerHTML = '<span class="save-dot"></span> Salvo automaticamente';
+  });
+}
+
+function getLocalAssessments() {
+  try {
+    const raw = localStorage.getItem('radar_assessments_' + (currentUser?.email || 'anon'));
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveToLocalStorage(result) {
+  try {
+    let items = getLocalAssessments();
+    const idx = items.findIndex(i => i.assessmentId === result.assessmentId);
+    if (idx >= 0) items[idx] = result;
+    else items.unshift(result);
+    localStorage.setItem('radar_assessments_' + (currentUser?.email || 'anon'), JSON.stringify(items.slice(0, 50)));
+  } catch(e) {}
+}
+
+// =========================================================
+// EXPORT
+// =========================================================
+function exportJSON() {
+  const a = allAssessments.find(x => x.assessmentId === currentAssessmentId);
+  if (!a) return;
+  const blob = new Blob([JSON.stringify(a, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'radar-projeto-' + (a.projectTitle || 'avaliação').replace(/\s+/g, '-').toLowerCase() + '.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyResultText() {
+  const a = allAssessments.find(x => x.assessmentId === currentAssessmentId);
+  if (!a) return;
+  const pct = a.computedScores.pct;
+  const text = `RADAR DO PROJETO - PROEXT-PG - UNEMAT
+Projeto: ${a.projectTitle}
+Data: ${new Date(a.updatedAt).toLocaleDateString('pt-BR')}
+
+RESULTADO: ${a.classification.text}
+
+Extensao:  ${pct.ext}%
+Pesquisa:  ${pct.pes}%
+Inovacao:  ${pct.ino}%
+
+Pontos fortes: ${a.insights.strong.join(', ')}
+Sugestões: ${a.insights.suggestions.join(', ')}`;
+
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('Resultado copiado para a área de transferência.'))
+    .catch(() => showToast('Não foi possível copiar. Tente manualmente.'));
+}
+
+// =========================================================
+// UTILITIES
+// =========================================================
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function showError(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// Handle case when user is already logged in via localStorage (demo mode)
+(function() {
+  const demo = localStorage.getItem('demoUser');
+  if (demo && !fbAvailable) {
+    currentUser = { email: demo, uid: 'local_' + demo };
+    window.addEventListener('load', () => onUserLoggedIn(currentUser));
+  }
+})();
+</script>
+
+</body>
+</html>
