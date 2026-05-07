@@ -3042,7 +3042,7 @@ document.addEventListener('keydown', e => {
 });
 
 // =========================================================
-// AI PARECER PERSONALIZADO
+// ANALISE INTELIGENTE — geração local baseada nos dados do projeto
 // =========================================================
 let currentResultForAI = null;
 
@@ -3060,122 +3060,181 @@ function generateAIParecer() {
   content.style.display = 'none';
   errorEl.style.display = 'none';
 
+  // Gerar analise localmente com pequeno delay para UX
+  setTimeout(() => {
+    try {
+      const parsed = buildLocalParecer(a);
+      loading.style.display = 'none';
+
+      const pct = a.computedScores.pct;
+      const ranked = ['ext','pes','ino'].map(k=>({key:k,pct:pct[k]})).sort((x,y)=>y.pct-x.pct);
+      const weakAxis = ranked[ranked.length-1];
+      const axisNames = { ext: 'Extensão', pes: 'Pesquisa', ino: 'Inovação' };
+
+      renderAIParecer(parsed, weakAxis, axisNames);
+      content.style.display = 'block';
+
+      if (currentResultForAI) {
+        currentResultForAI.aiParecer = parsed;
+        saveToLocalStorage(currentResultForAI);
+        const idx = allAssessments.findIndex(i => i.assessmentId === currentResultForAI.assessmentId);
+        if (idx >= 0) allAssessments[idx] = currentResultForAI;
+        else allAssessments.unshift(currentResultForAI);
+        if (fbAvailable && currentUser) saveAssessmentToFirebase(currentResultForAI);
+      }
+    } catch(e) {
+      loading.style.display = 'none';
+      errorEl.textContent = 'Erro ao gerar análise. Tente novamente.';
+      errorEl.style.display = 'block';
+    }
+  }, 1400);
+}
+
+function buildLocalParecer(a) {
   const pct = a.computedScores.pct;
   const info = a.projectInfo || {};
-  const ranked = ['ext','pes','ino']
-    .map(k => ({ key: k, pct: pct[k] }))
-    .sort((a,b) => b.pct - a.pct);
-  const weakAxis = ranked[ranked.length - 1];
-  const axisNames = { ext: 'Extensao', pes: 'Pesquisa', ino: 'Inovacao' };
+  const title = a.projectTitle || 'Projeto sem título';
+  const area = info.area || 'área não informada';
+  const cidade = info.cidade ? info.cidade + (info.estado ? '/' + info.estado : '') : 'localização não informada';
+  const escopo = info.escopoGeo || 'municipal';
+  const communities = (info.communities || []);
+  const products = (info.products || []);
+  const devolutiva = info.devolutiva || '';
+  const tipo = a.classification.type || '';
+  const label = a.classification.label || '';
 
-  const prompt = `Voce eh um especialista em projetos academicos brasileiros, com profundo conhecimento em extensao universitaria, pesquisa cientifica, inovacao tecnologica, editais de fomento e parcerias institucionais no Brasil.
+  const ranked = ['ext','pes','ino'].map(k=>({key:k,pct:pct[k]})).sort((x,y)=>y.pct-x.pct);
+  const first = ranked[0];
+  const weak = ranked[ranked.length-1];
+  const axisNames = { ext: 'Extensão', pes: 'Pesquisa', ino: 'Inovação' };
 
-Analise este projeto universitario e gere um PARECER PERSONALIZADO e especifico:
+  // ---- RESUMO EXECUTIVO ----
+  const perfisDesc = {
+    ext: 'forte vocação extensionista',
+    pes: 'sólida orientação científica',
+    ino: 'clara vocação inovadora'
+  };
+  const temComunidade = communities.length > 0;
+  const temProduto = products.length > 0;
 
-PROJETO: "${a.projectTitle}"
-AREA TEMATICA: ${info.area || 'nao informada'}
-RESPONSAVEL: ${info.author || 'nao informado'}
-DESCRICAO: ${info.description || 'nao informada'}
-LOCALIZACAO: ${info.cidade || ''}${info.estado ? '/' + info.estado : ''} — ${info.comunidadeLocal || ''} (Abrangencia: ${info.escopoGeo || 'municipal'})
-COMUNIDADES ATENDIDAS: ${(info.communities||[]).join(', ') || 'nao informadas'}
-PRODUTOS PREVISTOS: ${(info.products||[]).join(', ') || 'nao informados'}
-DEVOLUTIVA A SOCIEDADE: ${info.devolutiva || 'nao informada'}
+  let resumo = `O projeto "${title}", desenvolvido na área de ${area} e com atuação prevista em ${cidade}, apresenta ${perfisDesc[first.key] || 'perfil multidimensional'}, com ${pct.ext}% de alinhamento à Extensão, ${pct.pes}% à Pesquisa e ${pct.ino}% à Inovação. `;
+  if (temComunidade) resumo += `Seu foco em ${communities.slice(0,2).join(' e ')} confere relevância social concreta ao projeto. `;
+  if (devolutiva) resumo += `A devolutiva à sociedade prevista é: ${devolutiva.slice(0,120)}${devolutiva.length>120?'...':''}.`;
 
-RESULTADO DA AVALIACAO:
-- Perfil: ${a.classification.text}
-- Extensao: ${pct.ext}%
-- Pesquisa: ${pct.pes}%
-- Inovacao: ${pct.ino}%
-- Eixo mais fraco: ${axisNames[weakAxis.key]} (${weakAxis.pct}%)
+  // ---- PLANO DE AÇÃO (personalizado por perfil dominante) ----
+  const planoBase = {
+    ext: [
+      { passo:1, acao:`Formalizar o projeto no Sistema de Extensão da UNEMAT e vincular às comunidades selecionadas (${communities.slice(0,2).join(', ') || 'a definir'})`, prazo:'30 dias' },
+      { passo:2, acao:`Elaborar o Plano de Trabalho de Extensão com indicadores de impacto mensuráveis: número de pessoas atendidas, horas de capacitação, produtos entregues`, prazo:'45 dias' },
+      { passo:3, acao:`Submeter ao edital PROEXT-PG/UNEMAT ou FAPEMAT de Extensão com o projeto formalizado e a equipe definida`, prazo:'60-90 dias' },
+      { passo:4, acao:`Iniciar as ações comunitárias e registrar com fotos, lista de presença e relatório parcial para comprovar as horas de extensão curricular`, prazo:'3-6 meses' },
+      { passo:5, acao:`Publicar relato de experiência ou artigo de extensão descrevendo os impactos na ${communities[0] || 'comunidade atendida'}`, prazo:'12 meses' }
+    ],
+    pes: [
+      { passo:1, acao:`Registrar o projeto no Diretório de Grupos de Pesquisa do CNPq e definir a pergunta científica central com hipóteses testáveis`, prazo:'30 dias' },
+      { passo:2, acao:`Elaborar o protocolo metodológico completo: amostragem, instrumentos de coleta, análise estatística e cronograma de campo`, prazo:'45 dias' },
+      { passo:3, acao:`Submeter o projeto ao Comitê de Ética (se envolver seres humanos) e registrar no OSF (Open Science Framework) para aumentar credibilidade`, prazo:'60 dias' },
+      { passo:4, acao:`Executar coleta de dados em ${cidade} e iniciar análise com R, Python ou SPSS, documentando todos os procedimentos`, prazo:'3-8 meses' },
+      { passo:5, acao:`Submeter artigo ao Portal CAPES de Periódicos, priorizando revistas Qualis A1-A2 na área de ${area}`, prazo:'12-18 meses' }
+    ],
+    ino: [
+      { passo:1, acao:`Realizar diagnóstico técnico do problema a ser resolvido e definir os requisitos do produto, processo ou tecnologia a ser desenvolvida`, prazo:'30 dias' },
+      { passo:2, acao:`Articular-se com o NIT (Núcleo de Inovação Tecnológica) da UNEMAT para orientação sobre propriedade intelectual antes de publicar qualquer resultado`, prazo:'45 dias' },
+      { passo:3, acao:`Construir protótipo ou versão inicial do produto/metodologia e submetê-lo a testes com usuários reais em ${cidade}`, prazo:'3-6 meses' },
+      { passo:4, acao:`Submeter ao edital FINEP, BNDES Garagem ou EMBRAPII para financiamento de inovação; explorar também editais FAPEMAT de inovação`, prazo:'60-90 dias' },
+      { passo:5, acao:`Registrar o produto ou software no INPI e elaborar plano de transferência tecnológica ou modelo de negócio para garantir adoção`, prazo:'12 meses' }
+    ]
+  };
 
-Gere o parecer EXCLUSIVAMENTE em JSON valido (sem markdown, sem backticks), com exatamente esta estrutura:
-{
-  "resumo_executivo": "2-3 frases personalizadas sobre o projeto, mencionando o titulo, area e perfil encontrado",
-  "plano_de_acao": [
-    {"passo": 1, "acao": "acao concreta e especifica para este projeto", "prazo": "ex: 30 dias"},
-    {"passo": 2, "acao": "...", "prazo": "..."},
-    {"passo": 3, "acao": "...", "prazo": "..."},
-    {"passo": 4, "acao": "...", "prazo": "..."},
-    {"passo": 5, "acao": "...", "prazo": "..."}
-  ],
-  "editais_recomendados": [
-    {"nome": "nome real do edital ou programa", "orgao": "orgao financiador", "compatibilidade": "por que este edital combina com este projeto especifico"},
-    {"nome": "...", "orgao": "...", "compatibilidade": "..."},
-    {"nome": "...", "orgao": "...", "compatibilidade": "..."}
-  ],
-  "parceiros_sugeridos": [
-    {"nome": "instituicao ou tipo de parceiro", "papel": "como esta parceria beneficiaria o projeto"},
-    {"nome": "...", "papel": "..."},
-    {"nome": "...", "papel": "..."},
-    {"nome": "...", "papel": "..."}
-  ],
-  "retorno_a_sociedade": [
-    {"icone": "emoji relevante", "beneficio": "beneficio concreto e mensuravel para a sociedade"},
-    {"icone": "emoji", "beneficio": "..."},
-    {"icone": "emoji", "beneficio": "..."}
-  ],
-  "como_fortalecer_eixo_fraco": [
-    "dica especifica 1 para fortalecer ${axisNames[weakAxis.key]} neste projeto",
-    "dica especifica 2",
-    "dica especifica 3"
-  ]
-}`;
+  const plano = planoBase[first.key] || planoBase.ext;
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1800,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    loading.style.display = 'none';
-    const raw = (data.content || []).map(b => b.text || '').join('').trim();
-    let parsed;
-    try {
-      const clean = raw.replace(/```json|```/g,'').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      errorEl.textContent = 'Erro ao processar a resposta da IA. Tente novamente.';
-      errorEl.style.display = 'block';
-      return;
-    }
-    renderAIParecer(parsed, weakAxis, axisNames);
-    content.style.display = 'block';
+  // ---- EDITAIS (por perfil) ----
+  const editaisBase = {
+    ext: [
+      { nome:'PROEXT-PG — Extensão Universitária', orgao:'UNEMAT/CAPES', compatibilidade:`Edital voltado especificamente a projetos de extensão com envolvimento comunitário. Alinhamento direto com o perfil extensionista de "${title}".` },
+      { nome:'Edital Universal FAPEMAT', orgao:'FAPEMAT', compatibilidade:`Financia pesquisas com impacto social no Mato Grosso — ideal para projetos com atuação em ${cidade} e comunidades locais.` },
+      { nome:'Programa de Extensão CNPq', orgao:'CNPq/MCTI', compatibilidade:`Linha de fomento para projetos que articulem ensino, pesquisa e extensão, com retorno direto à sociedade.` }
+    ],
+    pes: [
+      { nome:'Edital Universal CNPq', orgao:'CNPq', compatibilidade:`Principal edital para pesquisa básica e aplicada no Brasil. O perfil científico de "${title}" tem forte aderência.` },
+      { nome:'Edital Pesquisa FAPEMAT', orgao:'FAPEMAT', compatibilidade:`Financia pesquisas desenvolvidas em instituições públicas de MT — prioridade para projetos em ${cidade}.` },
+      { nome:'PROEX/PROCAD CAPES', orgao:'CAPES', compatibilidade:`Programas de fomento à pesquisa de pós-graduação e internacionalização, alinhados à área de ${area}.` }
+    ],
+    ino: [
+      { nome:'FINEP Inovação — Subvenção Econômica', orgao:'FINEP/MCTI', compatibilidade:`Maior programa de financiamento à inovação do Brasil. O perfil tecnológico de "${title}" se enquadra nas linhas de inovação aplicada.` },
+      { nome:'BNDES Garagem', orgao:'BNDES', compatibilidade:`Programa de aceleração para soluções inovadoras com potencial de escalonamento — compatível com a abrangência ${escopo} do projeto.` },
+      { nome:'Edital EMBRAPII — Projetos em Rede', orgao:'EMBRAPII', compatibilidade:`Financia inovação em parceria com empresas. Ideal se o projeto tiver potencial de transferência tecnológica para o setor produtivo.` }
+    ]
+  };
 
-    // Save AI parecer to the result
-    if (currentResultForAI) {
-      currentResultForAI.aiParecer = parsed;
-      saveToLocalStorage(currentResultForAI);
-      const idx = allAssessments.findIndex(i => i.assessmentId === currentResultForAI.assessmentId);
-      if (idx >= 0) allAssessments[idx] = currentResultForAI;
-      else allAssessments.unshift(currentResultForAI);
-      if (fbAvailable && currentUser) saveAssessmentToFirebase(currentResultForAI);
-    }
-  })
-  .catch(err => {
-    loading.style.display = 'none';
-    const isLocalFile = window.location.protocol === 'file:';
-    if (isLocalFile) {
-      errorEl.innerHTML = `
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          <span style="font-size:22px;flex-shrink:0;">⚠️</span>
-          <div>
-            <strong style="display:block;margin-bottom:6px;">Análise indisponível no modo local</strong>
-            A análise inteligente requer conexão com o servidor. Para ativá-la, publique o projeto no GitHub Pages ou abra via servidor web. As demais funcionalidades (formulário, classificação, exportação) funcionam normalmente aqui.
-            <div style="margin-top:10px;padding:10px 14px;background:rgba(220,38,38,0.08);border-radius:8px;font-size:12px;color:#991b1b;">
-              💡 Dica: suba o <code>index.html</code> no seu repositório GitHub Pages para usar a análise completa.
-            </div>
-          </div>
-        </div>`;
-    } else {
-      errorEl.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
-    }
-    errorEl.style.display = 'block';
-  });
+  // Adiciona edital especifico para area
+  const editaisEspecificos = {
+    'saúde': { nome:'PPSUS — Pesquisa para o SUS', orgao:'CNPq/MS/FAPEMAT', compatibilidade:`Programa específico para pesquisa em saúde com impacto no SUS — altamente compatível com a área de ${area}.` },
+    'saude': { nome:'PPSUS — Pesquisa para o SUS', orgao:'CNPq/MS/FAPEMAT', compatibilidade:`Programa específico para pesquisa em saúde com impacto no SUS.` },
+    'educação': { nome:'Observatório da Educação', orgao:'CAPES/INEP', compatibilidade:`Edital específico para pesquisa e extensão em educação básica — compatível com a área de ${area}.` },
+    'educacao': { nome:'Observatório da Educação', orgao:'CAPES/INEP', compatibilidade:`Edital específico para pesquisa e extensão em educação.` },
+    'meio ambiente': { nome:'Fundo Amazônia — BNDES', orgao:'BNDES/MMA', compatibilidade:`Financia projetos de conservação e uso sustentável na Amazônia Legal — abrange o Mato Grosso.` },
+    'ambiental': { nome:'Fundo Amazônia — BNDES', orgao:'BNDES/MMA', compatibilidade:`Fundo voltado a projetos ambientais na Amazônia Legal.` }
+  };
+
+  const areaLower = area.toLowerCase();
+  let editais = [...(editaisBase[first.key] || editaisBase.ext)];
+  for (const [key, edital] of Object.entries(editaisEspecificos)) {
+    if (areaLower.includes(key)) { editais.unshift(edital); editais = editais.slice(0,3); break; }
+  }
+
+  // ---- PARCEIROS (por perfil + localização) ----
+  const parceiros = [];
+  if (first.key === 'ext' || pct.ext > 30) {
+    parceiros.push({ nome:`Prefeitura Municipal de ${info.cidade || 'execução'}`, papel:`Parceria institucional para facilitar acesso às comunidades, ceder espaços e ampliar o alcance das ações comunitárias.` });
+    parceiros.push({ nome:'ONGs e associações locais', papel:`Articulação com organizações já inseridas nas comunidades atendidas para co-execução das atividades.` });
+  }
+  if (first.key === 'pes' || pct.pes > 30) {
+    parceiros.push({ nome:'Grupos de Pesquisa da UNEMAT/UFMT', papel:`Colaboração científica para fortalecimento metodológico, co-autoria e acesso a laboratórios e infraestrutura.` });
+    parceiros.push({ nome:'Radboud University / parceiros internacionais', papel:`Cooperação internacional para validação metodológica, co-autoria e acesso a bases de dados internacionais.` });
+  }
+  if (first.key === 'ino' || pct.ino > 30) {
+    parceiros.push({ nome:'NIT-UNEMAT — Núcleo de Inovação Tecnológica', papel:`Apoio em registro de propriedade intelectual, transferência tecnológica e conexão com empresas parceiras.` });
+    parceiros.push({ nome:'SEBRAE-MT / SENAI-MT', papel:`Parceria para transferência tecnológica, capacitação e acesso ao mercado regional para os produtos gerados.` });
+  }
+  if (parceiros.length < 3) parceiros.push({ nome:'MPMT / Ministério Público Estadual', papel:`Parceria para projetos com impacto em direitos sociais, ambientais ou comunitários — amplia legitimidade e visibilidade.` });
+
+  // ---- RETORNO À SOCIEDADE ----
+  const retornos = [];
+  if (communities.length > 0) retornos.push({ icone:'🤝', beneficio:`Benefício direto para ${communities.slice(0,2).join(' e ')}: acesso a conhecimento, tecnologia e suporte institucional antes indisponível.` });
+  if (devolutiva) retornos.push({ icone:'🎁', beneficio:devolutiva.slice(0,150) + (devolutiva.length > 150 ? '...' : '') });
+  if (products.length > 0) retornos.push({ icone:'📦', beneficio:`Geração de ${products.slice(0,2).join(' e ')}: produto concreto e disponível para uso pela sociedade.` });
+  retornos.push({ icone:'🎓', beneficio:`Formação e qualificação de alunos e comunidades envolvidos, com impacto duradouro na capacidade local de ${info.cidade || 'atuação'}.` });
+  retornos.push({ icone:'📊', beneficio:`Produção de dados e conhecimento sobre a realidade de ${cidade}, que podem subsidiar políticas públicas de abrangência ${escopo}.` });
+
+  // ---- FORTALECER EIXO FRACO ----
+  const fortalecer = {
+    ext: [
+      `Incorpore ao cronograma pelo menos 3 ações presenciais com a comunidade (oficinas, diagnósticos participativos, reuniões) para elevar o componente extensionista.`,
+      `Envolva estudantes de graduação como bolsistas de extensão — isso fortalece o vínculo com a sociedade e cumpre a obrigatoriedade dos 10% de extensão curricular.`,
+      `Documente a "devolutiva" do projeto à comunidade com relatórios fotográficos e depoimentos — isso valoriza o componente de Extensão nos relatórios finais.`
+    ],
+    pes: [
+      `Formalize uma pergunta científica central e pelo menos duas hipóteses testáveis para estruturar a dimensão de Pesquisa do projeto.`,
+      `Inclua coleta e análise de dados com método formal (amostragem, instrumento validado, estatística) — mesmo que seja secundário ao objetivo principal.`,
+      `Planeje a publicação de pelo menos um artigo ou relatório técnico a partir dos dados coletados — isso valoriza o componente de Pesquisa junto às agências de fomento.`
+    ],
+    ino: [
+      `Identifique um problema prático que o projeto possa resolver com um produto, processo ou metodologia nova — isso eleva o componente de Inovação.`,
+      `Articule-se com empresas ou gestores públicos locais para co-desenvolver soluções — projetos com parceiros privados têm maior pontuação em editais de inovação.`,
+      `Registre no NIT-UNEMAT qualquer metodologia, software ou produto original gerado — mesmo registros simples elevam o perfil inovador do projeto.`
+    ]
+  };
+
+  return {
+    resumo_executivo: resumo,
+    plano_de_acao: plano,
+    editais_recomendados: editais,
+    parceiros_sugeridos: parceiros.slice(0, 4),
+    retorno_a_sociedade: retornos.slice(0, 4),
+    como_fortalecer_eixo_fraco: fortalecer[weak.key] || fortalecer.ext
+  };
+}
 }
 
 function renderAIParecer(p, weakAxis, axisNames) {
