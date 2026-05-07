@@ -3261,147 +3261,574 @@ function buildLocalParecer(a) {
   const info = a.projectInfo || {};
   const title = a.projectTitle || 'Projeto sem título';
   const area = info.area || 'área não informada';
+  const areaL = area.toLowerCase();
   const cidade = info.cidade ? info.cidade + (info.estado ? '/' + info.estado : '') : 'localização não informada';
+  const cidadeS = info.cidade || 'local de execução';
   const escopo = info.escopoGeo || 'municipal';
-  const communities = (info.communities || []);
-  const products = (info.products || []);
+  const communities = info.communities || [];
+  const products = info.products || [];
   const devolutiva = info.devolutiva || '';
-  const tipo = a.classification.type || '';
-  const label = a.classification.label || '';
 
-  const ranked = ['ext','pes','ino'].map(k=>({key:k,pct:pct[k]})).sort((x,y)=>y.pct-x.pct);
-  const first = ranked[0];
-  const weak = ranked[ranked.length-1];
-  const axisNames = { ext: 'Extensão', pes: 'Pesquisa', ino: 'Inovação' };
+  const ranked = ['ext','pes','ino'].map(k=>({key:k,v:pct[k]})).sort((a,b)=>b.v-a.v);
+  const first = ranked[0].key, second = ranked[1].key, weak = ranked[2].key;
+  const AN = { ext:'Extensão', pes:'Pesquisa', ino:'Inovação' };
+  const gap01 = ranked[0].v - ranked[1].v;
+  const gap12 = ranked[1].v - ranked[2].v;
+  const isHybrid = gap01 < 15 && !( ranked[0].v > 30 && ranked[1].v > 30 && ranked[2].v > 30 );
+  const isIntegrated = ranked[2].v >= 25 && gap01 < 20;
+  const intensity = ranked[0].v >= 65 ? 'forte' : ranked[0].v >= 45 ? 'moderado' : 'incipiente';
 
-  // ---- RESUMO EXECUTIVO ----
-  const perfisDesc = {
-    ext: 'forte vocação extensionista',
-    pes: 'sólida orientação científica',
-    ino: 'clara vocação inovadora'
+  // ============================================================
+  // DIMENSÃO 1 — BANCO DE EDITAIS (sem PROEXT-PG — sem edital aberto)
+  // Cada edital tem: nome, orgao, janela (quando costuma abrir), compatibilidade fn
+  // ============================================================
+  const EDITAIS = {
+    // EXTENSÃO
+    ext_fapemat:   { nome:'Edital de Apoio à Extensão FAPEMAT', orgao:'FAPEMAT', janela:'Aberturas irregulares, geralmente 1º semestre', compat: (t,c,a,e) => `Financia ações de extensão em MT com foco em impacto social direto — forte aderência com ${t} em ${c}.` },
+    ext_cnpq:      { nome:'Chamada CNPq — Extensão Tecnológica', orgao:'CNPq/MCTI', janela:'Publicado bienalmente, monitorar portal cnpq.br', compat: (t,c,a,e) => `Linha de extensão tecnológica do CNPq. Compatível com projetos que combinam ação comunitária e conhecimento técnico como "${t}".` },
+    ext_capes:     { nome:'CAPES — Programa de Residência Pedagógica / PIBEX', orgao:'CAPES', janela:'Edital anual, geralmente março-maio', compat: (t,c,a,e) => `Financiamento de bolsas de extensão para estudantes em projetos com impacto comunitário. Aplicável para "${t}" em ${c}.` },
+    ext_mds:       { nome:'Chamada MDS — Segurança Alimentar e Extensão Rural', orgao:'Ministério do Desenvolvimento Social', janela:'Chamadas específicas, monitorar portal gov.br/mds', compat: (t,c,a,e) => `Voltado para projetos com comunidades em situação de vulnerabilidade social — aplicável dependendo das populações atendidas em ${c}.` },
+    ext_proext:    { nome:'PROEXT — Programa de Extensão Universitária MEC', orgao:'MEC/SESu', janela:'Historicamente aberto no 2º semestre — monitorar MEC', compat: (t,c,a,e) => `Maior programa federal de extensão universitária. Compatível com "${t}" pelo perfil de engajamento comunitário.` },
+    // PESQUISA
+    pes_universal: { nome:'Chamada Universal CNPq', orgao:'CNPq', janela:'Bienal, faixas A/B/C por valor — monitorar cnpq.br', compat: (t,c,a,e) => `Principal edital de pesquisa livre do Brasil. A solidez científica de "${t}" é elegível para Faixas B ou C dependendo da equipe.` },
+    pes_fapemat:   { nome:'Edital de Pesquisa Básica e Aplicada FAPEMAT', orgao:'FAPEMAT', janela:'Aberturas periódicas, monitorar fapemat.mt.gov.br', compat: (t,c,a,e) => `Edital estadual com prioridade para pesquisas executadas em MT. Forte aderência com "${t}" desenvolvido em ${c}.` },
+    pes_capes_pp:  { nome:'CAPES — Programa de Pós-Graduação (Bolsas/Auxílios)', orgao:'CAPES', janela:'Contínuo via programa de PG cadastrado', compat: (t,c,a,e) => `Recursos via PG para bolsas e custeio de projetos vinculados a dissertações/teses na área de ${a}.` },
+    pes_print:     { nome:'CAPES-PrInt — Internacionalização da Pesquisa', orgao:'CAPES', janela:'Edital bienal — monitorar portal CAPES', compat: (t,c,a,e) => `Viabiliza cooperação internacional em ${a}. Recomendado se houver parceiros estrangeiros ou interesse em publicações conjuntas.` },
+    pes_ppsus:     { nome:'PPSUS — Pesquisa para o SUS', orgao:'CNPq/MS/FAPEMAT', janela:'Lançado a cada 2-3 anos pelos estados — acompanhar FAPEMAT', compat: (t,c,a,e) => `Edital de pesquisa aplicada em saúde coletiva. Altamente compatível com "${t}" pela interface com o sistema público de saúde.` },
+    pes_obeduc:    { nome:'OBEDUC — Observatório da Educação', orgao:'CAPES/INEP', janela:'Publicado a cada 2-3 anos', compat: (t,c,a,e) => `Financia pesquisa em educação básica vinculada a dados oficiais. Compatível com "${t}" pela base empírica em ${a}.` },
+    pes_mcti:      { nome:'Chamada MCTI — Ciência, Tecnologia e Inovação Social', orgao:'MCTI', janela:'Publicado anualmente em parceria com CNPq', compat: (t,c,a,e) => `Edital que valoriza pesquisa com impacto social mensurável — adequado para o perfil de "${t}".` },
+    // INOVAÇÃO
+    ino_finep_sub: { nome:'FINEP — Subvenção Econômica à Inovação', orgao:'FINEP/MCTI', janela:'Editais periódicos — finep.gov.br', compat: (t,c,a,e) => `Maior programa federal de subvenção à inovação. O potencial tecnológico de "${t}" é elegível se houver produto ou processo definido.` },
+    ino_finep_ref: { nome:'FINEP — Inovação para Startups e Spin-offs', orgao:'FINEP', janela:'Chamadas abertas, verificar finep.gov.br/chamadas', compat: (t,c,a,e) => `Linha para soluções inovadoras com potencial de escalonamento — compatível com abrangência ${e} de "${t}".` },
+    ino_bndes:     { nome:'BNDES Garagem — Inovação Aberta', orgao:'BNDES', janela:'Ciclos trimestrais — bndes.gov.br/garagem', compat: (t,c,a,e) => `Programa de aceleração para MVPs e protótipos com impacto social. Perfeito para a fase atual de "${t}".` },
+    ino_embrapii:  { nome:'EMBRAPII — Chamadas para Projetos em Rede', orgao:'EMBRAPII', janela:'Chamadas abertas via unidades credenciadas', compat: (t,c,a,e) => `Financia P&D em parceria com empresas. Recomendado se "${t}" tiver empresa parceira ou perspectiva de transferência tecnológica.` },
+    ino_senai:     { nome:'SENAI-MT — Inovação Tecnológica Industrial', orgao:'SENAI/FIEMT', janela:'Chamadas internas — contatar SENAI-MT em Cuiabá', compat: (t,c,a,e) => `Parceria com SENAI para desenvolvimento de protótipos e validação industrial em ${a}. Excelente para produtos com aplicação no setor produtivo de MT.` },
+    ino_fapemat_i: { nome:'FAPEMAT — Apoio a Projetos de Inovação Tecnológica', orgao:'FAPEMAT', janela:'Chamadas periódicas — fapemat.mt.gov.br', compat: (t,c,a,e) => `Edital estadual que financia inovação aplicada em MT — prioritário para "${t}" com abrangência ${e}.` },
+    // TEMÁTICOS
+    tema_amazonia: { nome:'Fundo Amazônia — BNDES', orgao:'BNDES/Doadores internacionais', janela:'Chamadas abertas — fundoamazonia.gov.br', compat: (t,c,a,e) => `Fundo com recursos para projetos de conservação, uso sustentável e governança ambiental na Amazônia Legal. MT está no escopo.` },
+    tema_cthidro:  { nome:'CTHidro — Fundo Setorial de Recursos Hídricos', orgao:'FINEP/CNPq', janela:'Chamadas bienais vinculadas ao setor hídrico', compat: (t,c,a,e) => `Fundo setorial específico para pesquisa e tecnologia em recursos hídricos — aderência direta com "${t}" na bacia hidrográfica de ${c}.` },
+    tema_pronac:   { nome:'PRONAC / Lei Rouanet — Apoio à Cultura', orgao:'MinC', janela:'Cadastro contínuo, aprovações trimestrais', compat: (t,c,a,e) => `Mecanismo de financiamento cultural para projetos com valor histórico, artístico ou patrimonial. Aplicável a "${t}" pela dimensão cultural.` },
+    tema_embrapa:  { nome:'EMBRAPA — Chamadas de PD&I em Agropecuária', orgao:'EMBRAPA', janela:'Chamadas específicas por tema — embrapa.br/chamadas', compat: (t,c,a,e) => `Financiamento para pesquisa agropecuária aplicada. Alta compatibilidade com "${t}" pela interface com produção rural em MT.` },
+    tema_saude_ms: { nome:'MS/DECIT — Pesquisa para o SUS (nacional)', orgao:'Ministério da Saúde/DECIT', janela:'Chamadas anuais por prioridade de saúde', compat: (t,c,a,e) => `Chamadas temáticas de pesquisa em saúde pública definidas por prioridade nacional. Compatível com "${t}" pela área de ${a}.` },
+    tema_energia:  { nome:'ANEEL — P&D Energia Elétrica', orgao:'ANEEL', janela:'Contínuo via distribuidoras regionais', compat: (t,c,a,e) => `Programa obrigatório de P&D das distribuidoras de energia. Compatível com "${t}" se houver parceria com a concessionária local.` },
+    tema_softex:   { nome:'MCTI/Softex — TI Verde e Inovação Digital', orgao:'MCTI/Softex', janela:'Chamadas anuais — softex.br', compat: (t,c,a,e) => `Programa de fomento à inovação em software e TI. Alta aderência com "${t}" pelo componente tecnológico em ${a}.` },
+    tema_ods_mma:  { nome:'MMA — Agenda Ambiental Urbana (A3P)', orgao:'Ministério do Meio Ambiente', janela:'Adesões contínuas — mma.gov.br/a3p', compat: (t,c,a,e) => `Programa que apoia projetos com sustentabilidade ambiental e gestão de resíduos em municípios — alinhado com "${t}" em ${c}.` }
   };
-  const temComunidade = communities.length > 0;
-  const temProduto = products.length > 0;
 
-  let resumo = `O projeto "${title}", desenvolvido na área de ${area} e com atuação prevista em ${cidade}, apresenta ${perfisDesc[first.key] || 'perfil multidimensional'}, com ${pct.ext}% de alinhamento à Extensão, ${pct.pes}% à Pesquisa e ${pct.ino}% à Inovação. `;
-  if (temComunidade) resumo += `Seu foco em ${communities.slice(0,2).join(' e ')} confere relevância social concreta ao projeto. `;
-  if (devolutiva) resumo += `A devolutiva à sociedade prevista é: ${devolutiva.slice(0,120)}${devolutiva.length>120?'...':''}.`;
+  // Seleção permutativa de editais por perfil + área
+  function selectEditais(first, second, weak, areaL, escopo, title, cidadeS) {
+    const pools = {
+      ext: ['ext_fapemat','ext_cnpq','ext_capes','ext_mds','ext_proext'],
+      pes: ['pes_universal','pes_fapemat','pes_capes_pp','pes_print','pes_mcti'],
+      ino: ['ino_finep_sub','ino_finep_ref','ino_bndes','ino_embrapii','ino_fapemat_i','ino_senai']
+    };
+    const tematicos = {
+      'pantanal|hidro|água|bacia|wetland': ['tema_cthidro','tema_amazonia','tema_ods_mma'],
+      'ambiental|ecologia|biodiversidade|floresta|conserva': ['tema_amazonia','tema_ods_mma','tema_cthidro'],
+      'saúde|saude|epidemio|mortalidade|clínic': ['pes_ppsus','tema_saude_ms'],
+      'educação|educacao|escola|pedagog|letramento': ['pes_obeduc','ext_capes'],
+      'agro|rural|agricultur|alimento|pecuária|pecuaria': ['tema_embrapa','ext_mds'],
+      'cultura|arte|patrimôn|memória|históri': ['tema_pronac'],
+      'energia|solar|eólica|renov': ['tema_energia'],
+      'software|app|dados|digital|tecnolog|informação|informacao': ['tema_softex','ino_finep_ref','ino_senai']
+    };
 
-  // ---- PLANO DE AÇÃO (personalizado por perfil dominante) ----
-  const planoBase = {
+    let selected = [];
+    // 1. Temático prioritário
+    for (const [keys, ids] of Object.entries(tematicos)) {
+      if (keys.split('|').some(k => areaL.includes(k))) {
+        selected.push(ids[0]);
+        if (ids[1]) selected.push(ids[1]);
+        break;
+      }
+    }
+    // 2. Eixo dominante (2 editais, variando pelo intensity)
+    const mainPool = pools[first] || pools.ext;
+    // Usa hash do título para variar qual edital do pool
+    const hash = (title + cidadeS).split('').reduce((h,c)=>h+c.charCodeAt(0),0);
+    selected.push(mainPool[hash % mainPool.length]);
+    selected.push(mainPool[(hash + 2) % mainPool.length]);
+    // 3. Eixo segundo
+    const secPool = pools[second] || [];
+    if (secPool.length) selected.push(secPool[(hash+1) % secPool.length]);
+    // Deduplica e pega 3
+    selected = [...new Set(selected)].slice(0, 3);
+    // Garante 3
+    while (selected.length < 3) {
+      const fallback = pools[first] || pools.pes;
+      const fb = fallback.find(x => !selected.includes(x));
+      if (fb) selected.push(fb); else break;
+    }
+    return selected.map(id => {
+      const e = EDITAIS[id];
+      return { nome: e.nome, orgao: e.orgao, janela: e.janela, compatibilidade: e.compat(title, cidadeS, area, escopo) };
+    });
+  }
+
+  // ============================================================
+  // DIMENSÃO 2 — PLANOS DE AÇÃO (pool permutativo por perfil)
+  // 4 variações por eixo, seleção por hash
+  // ============================================================
+  const hash = (title + cidadeS + area).split('').reduce((h,c)=>h+c.charCodeAt(0),0);
+  const comStr = communities.slice(0,2).join(', ') || 'comunidade a definir';
+  const prodStr = products.slice(0,2).join(' e ') || 'produto a definir';
+
+  const PLANO_POOL = {
     ext: [
-      { passo:1, acao:`Formalizar o projeto no Sistema de Extensão da UNEMAT e vincular às comunidades selecionadas (${communities.slice(0,2).join(', ') || 'a definir'})`, prazo:'30 dias' },
-      { passo:2, acao:`Elaborar o Plano de Trabalho de Extensão com indicadores de impacto mensuráveis: número de pessoas atendidas, horas de capacitação, produtos entregues`, prazo:'45 dias' },
-      { passo:3, acao:`Submeter ao edital PROEXT-PG/UNEMAT ou FAPEMAT de Extensão com o projeto formalizado e a equipe definida`, prazo:'60-90 dias' },
-      { passo:4, acao:`Iniciar as ações comunitárias e registrar com fotos, lista de presença e relatório parcial para comprovar as horas de extensão curricular`, prazo:'3-6 meses' },
-      { passo:5, acao:`Publicar relato de experiência ou artigo de extensão descrevendo os impactos na ${communities[0] || 'comunidade atendida'}`, prazo:'12 meses' }
+      [
+        { passo:1, acao:`Formalizar o projeto no Sistema de Extensão da UNEMAT com vinculação às comunidades: ${comStr}`, prazo:'30 dias' },
+        { passo:2, acao:`Elaborar Plano de Trabalho de Extensão com indicadores mensuráveis: pessoas atendidas, horas e produtos entregues`, prazo:'45 dias' },
+        { passo:3, acao:`Buscar edital de extensão adequado ao perfil (FAPEMAT Extensão, CNPq Extensão Tecnológica ou CAPES/PIBEX)`, prazo:'60-90 dias' },
+        { passo:4, acao:`Executar ações presenciais em ${cidadeS} com registro sistemático: fotos, listas, gravações e depoimentos`, prazo:'3-6 meses' },
+        { passo:5, acao:`Publicar relato de experiência ou artigo de extensão descrevendo os impactos junto a ${comStr}`, prazo:'12 meses' }
+      ],[
+        { passo:1, acao:`Mapear demandas e expectativas de ${comStr} por meio de diagnóstico participativo antes de iniciar as ações`, prazo:'30 dias' },
+        { passo:2, acao:`Montar equipe multidisciplinar com estudantes bolsistas de extensão e parceiros comunitários`, prazo:'45 dias' },
+        { passo:3, acao:`Submeter projeto ao edital de extensão mais adequado ao perfil e área (monitorar FAPEMAT e MEC)`, prazo:'60 dias' },
+        { passo:4, acao:`Realizar ciclo de atividades (oficinas, capacitações, atendimentos) em ${cidadeS} documentando cada etapa`, prazo:'3-8 meses' },
+        { passo:5, acao:`Promover evento de devolutiva com ${comStr} apresentando os resultados e pactuando continuidade`, prazo:'12 meses' }
+      ]
     ],
     pes: [
-      { passo:1, acao:`Registrar o projeto no Diretório de Grupos de Pesquisa do CNPq e definir a pergunta científica central com hipóteses testáveis`, prazo:'30 dias' },
-      { passo:2, acao:`Elaborar o protocolo metodológico completo: amostragem, instrumentos de coleta, análise estatística e cronograma de campo`, prazo:'45 dias' },
-      { passo:3, acao:`Submeter o projeto ao Comitê de Ética (se envolver seres humanos) e registrar no OSF (Open Science Framework) para aumentar credibilidade`, prazo:'60 dias' },
-      { passo:4, acao:`Executar coleta de dados em ${cidade} e iniciar análise com R, Python ou SPSS, documentando todos os procedimentos`, prazo:'3-8 meses' },
-      { passo:5, acao:`Submeter artigo ao Portal CAPES de Periódicos, priorizando revistas Qualis A1-A2 na área de ${area}`, prazo:'12-18 meses' }
+      [
+        { passo:1, acao:`Registrar o projeto no Diretório de Grupos de Pesquisa do CNPq e definir pergunta científica central`, prazo:'30 dias' },
+        { passo:2, acao:`Elaborar protocolo metodológico: amostragem, instrumentos, análise estatística e cronograma de campo em ${cidadeS}`, prazo:'45 dias' },
+        { passo:3, acao:`Submeter ao Comitê de Ética (se aplicável) e pré-registrar estudo no OSF (Open Science Framework)`, prazo:'60 dias' },
+        { passo:4, acao:`Executar coleta de dados e análise com R ou Python, documentando procedimentos em repositório aberto`, prazo:'3-8 meses' },
+        { passo:5, acao:`Submeter artigo em periódico Qualis A1-A2 em ${area} via Portal de Periódicos CAPES`, prazo:'12-18 meses' }
+      ],[
+        { passo:1, acao:`Realizar revisão sistemática de literatura para fundamentar o desenho metodológico de "${title}"`, prazo:'30 dias' },
+        { passo:2, acao:`Estabelecer parcerias com grupos de pesquisa complementares na UFMT, INPA ou instituições internacionais`, prazo:'45 dias' },
+        { passo:3, acao:`Submeter ao edital FAPEMAT de Pesquisa Básica ou ao Universal CNPq, conforme faixa orçamentária`, prazo:'60-90 dias' },
+        { passo:4, acao:`Coletar dados primários em ${cidadeS}, validar instrumentos e construir banco de dados documentado`, prazo:'3-8 meses' },
+        { passo:5, acao:`Publicar dados em repositório aberto (Zenodo, GBIF, etc.) e submeter dois artigos a periódicos Qualis A`, prazo:'12-18 meses' }
+      ]
     ],
     ino: [
-      { passo:1, acao:`Realizar diagnóstico técnico do problema a ser resolvido e definir os requisitos do produto, processo ou tecnologia a ser desenvolvida`, prazo:'30 dias' },
-      { passo:2, acao:`Articular-se com o NIT (Núcleo de Inovação Tecnológica) da UNEMAT para orientação sobre propriedade intelectual antes de publicar qualquer resultado`, prazo:'45 dias' },
-      { passo:3, acao:`Construir protótipo ou versão inicial do produto/metodologia e submetê-lo a testes com usuários reais em ${cidade}`, prazo:'3-6 meses' },
-      { passo:4, acao:`Submeter ao edital FINEP, BNDES Garagem ou EMBRAPII para financiamento de inovação; explorar também editais FAPEMAT de inovação`, prazo:'60-90 dias' },
-      { passo:5, acao:`Registrar o produto ou software no INPI e elaborar plano de transferência tecnológica ou modelo de negócio para garantir adoção`, prazo:'12 meses' }
+      [
+        { passo:1, acao:`Elaborar mapeamento de tecnologias existentes (state of the art) para identificar a lacuna que "${title}" preenche`, prazo:'30 dias' },
+        { passo:2, acao:`Articular-se com o NIT-UNEMAT para avaliação de patenteabilidade e estratégia de propriedade intelectual`, prazo:'45 dias' },
+        { passo:3, acao:`Construir MVP ou protótipo funcional e conduzir testes com usuários reais em ${cidadeS}`, prazo:'3-6 meses' },
+        { passo:4, acao:`Submeter ao edital FINEP ou FAPEMAT-Inovação; buscar empresa parceira para co-investimento`, prazo:'60-90 dias' },
+        { passo:5, acao:`Registrar produto/software no INPI/NIT e elaborar plano de transferência tecnológica ou modelo de negócio`, prazo:'12 meses' }
+      ],[
+        { passo:1, acao:`Realizar entrevistas de validação com usuários potenciais de "${title}" em ${cidadeS} para refinar requisitos`, prazo:'30 dias' },
+        { passo:2, acao:`Aplicar metodologia ágil (Design Sprint ou Lean Startup) para desenvolvimento iterativo`, prazo:'45 dias' },
+        { passo:3, acao:`Apresentar o projeto no SENAI-MT ou SEBRAE-MT para captar parceiro industrial ou comercial`, prazo:'60 dias' },
+        { passo:4, acao:`Executar ciclo completo de desenvolvimento: protótipo → teste → refinamento → versão estável`, prazo:'3-8 meses' },
+        { passo:5, acao:`Submeter ao BNDES Garagem ou edital EMBRAPII para financiar escalonamento da solução`, prazo:'12 meses' }
+      ]
+    ],
+    hybrid_ext_pes: [
+      { passo:1, acao:`Estruturar o projeto em dois componentes paralelos: protocolo científico para coleta de dados e plano de ação comunitária em ${cidadeS}`, prazo:'30 dias' },
+      { passo:2, acao:`Formalizar na UNEMAT tanto o projeto de extensão quanto o de pesquisa, garantindo financiamentos distintos`, prazo:'45 dias' },
+      { passo:3, acao:`Executar diagnóstico participativo com ${comStr} enquanto coleta dados para o componente científico`, prazo:'2-4 meses' },
+      { passo:4, acao:`Analisar dados com R/Python e simultaneamente executar ações extensionistas com feedback contínuo`, prazo:'4-8 meses' },
+      { passo:5, acao:`Publicar artigo científico e relato de extensão articulando os resultados de ambos os componentes`, prazo:'12-18 meses' }
+    ],
+    hybrid_ext_ino: [
+      { passo:1, acao:`Conduzir cocriação com ${comStr} para definir os requisitos do produto/tecnologia de "${title}"`, prazo:'30 dias' },
+      { passo:2, acao:`Articular extensão universitária com desenvolvimento tecnológico: cada ação comunitária alimenta o produto`, prazo:'45 dias' },
+      { passo:3, acao:`Submeter a edital de extensão tecnológica (CNPq Extensão Tecnológica) que abranja os dois eixos`, prazo:'60 dias' },
+      { passo:4, acao:`Testar versões do produto junto às comunidades em ${cidadeS}, iterando com base no feedback direto`, prazo:'3-8 meses' },
+      { passo:5, acao:`Registrar metodologia co-criada no NIT-UNEMAT e publicar relato de extensão sobre o processo`, prazo:'12 meses' }
+    ],
+    hybrid_pes_ino: [
+      { passo:1, acao:`Definir a pergunta científica que a inovação tecnológica de "${title}" responde — vincular desenvolvimento a evidência`, prazo:'30 dias' },
+      { passo:2, acao:`Submeter ao CNPq Universal (pesquisa) e explorar FINEP/FAPEMAT-Inovação para o componente tecnológico`, prazo:'45-60 dias' },
+      { passo:3, acao:`Coletar dados científicos em ${cidadeS} e paralelamente desenvolver o protótipo da solução`, prazo:'3-6 meses' },
+      { passo:4, acao:`Validar o produto com base nos dados coletados — pesquisa e inovação se retroalimentam`, prazo:'6-10 meses' },
+      { passo:5, acao:`Publicar artigo científico e patentear/registrar a solução tecnológica resultante`, prazo:'12-18 meses' }
+    ],
+    integrated: [
+      { passo:1, acao:`Estruturar "${title}" em três frentes integradas: ação comunitária em ${cidadeS}, protocolo de pesquisa e componente inovador`, prazo:'30 dias' },
+      { passo:2, acao:`Submeter a editais interdisciplinares: Universal CNPq para pesquisa, FAPEMAT para extensão, FINEP para inovação`, prazo:'45-60 dias' },
+      { passo:3, acao:`Executar diagnóstico participativo com ${comStr} que alimenta simultaneamente a pesquisa e o desenvolvimento tecnológico`, prazo:'2-5 meses' },
+      { passo:4, acao:`Integrar resultados dos três eixos em produto final acessível à comunidade: relatório, ferramenta e publicação`, prazo:'6-12 meses' },
+      { passo:5, acao:`Elaborar relatório integrado de impacto para agências de fomento, comunidade e Agência de Inovação da UNEMAT`, prazo:'18 meses' }
     ]
   };
 
-  const plano = planoBase[first.key] || planoBase.ext;
+  function selectPlano(first, second, weak, isHybrid, isIntegrated, hash) {
+    if (isIntegrated) return PLANO_POOL.integrated;
+    if (isHybrid) {
+      const hk = `hybrid_${first}_${second}`;
+      if (PLANO_POOL[hk]) return PLANO_POOL[hk];
+      const hk2 = `hybrid_${[first,second].sort().join('_')}`;
+      return PLANO_POOL[hk2] || PLANO_POOL[`hybrid_${first}_pes`] || PLANO_POOL[first][0];
+    }
+    const pool = PLANO_POOL[first];
+    if (Array.isArray(pool[0])) return pool[hash % pool.length];
+    return pool;
+  }
+  const plano = selectPlano(first, second, weak, isHybrid, isIntegrated, hash);
 
-  // ---- EDITAIS (por perfil) ----
-  const editaisBase = {
+  // ============================================================
+  // ============================================================
+  // DIMENSÃO 3 — PARCEIROS (pool amplo MT, sem Radboud, com links)
+  // ============================================================
+  const PARC_POOL = {
     ext: [
-      { nome:'PROEXT-PG — Extensão Universitária', orgao:'UNEMAT/CAPES', compatibilidade:`Edital voltado especificamente a projetos de extensão com envolvimento comunitário. Alinhamento direto com o perfil extensionista de "${title}".` },
-      { nome:'Edital Universal FAPEMAT', orgao:'FAPEMAT', compatibilidade:`Financia pesquisas com impacto social no Mato Grosso — ideal para projetos com atuação em ${cidade} e comunidades locais.` },
-      { nome:'Programa de Extensão CNPq', orgao:'CNPq/MCTI', compatibilidade:`Linha de fomento para projetos que articulem ensino, pesquisa e extensão, com retorno direto à sociedade.` }
+      { nome:`Prefeitura de ${cidadeS} — Secretaria de Assistência Social`, papel:`Parceria para acesso às comunidades, infraestrutura e legitimidade institucional das ações de "${title}".`, link:'https://www.cidades.gov.br' },
+      { nome:'AMM — Associação Mato-Grossense dos Municípios', papel:`Canal para replicar os resultados de "${title}" em outros municípios de MT e ampliar abrangência ${escopo}.`, link:'https://www.amm.org.br' },
+      { nome:'MPMT — Ministério Público do Estado de MT', papel:`Apoio jurídico-institucional para ações de "${title}" com impacto em direitos sociais, ambientais ou territoriais.`, link:'https://www.mpmt.mp.br' },
+      { nome:`CRAS / CREAS de ${cidadeS} — Rede SUAS`, papel:`Articulação com a proteção social para potencializar o alcance comunitário de "${title}".`, link:'https://www.gov.br/pt-br/servicos/localizar-cras' },
+      { nome:'Defensoria Pública do Estado de MT', papel:`Parceria para garantir perspectiva de direitos humanos em "${title}" junto a populações vulneráveis.`, link:'https://www.defensoria.mt.def.br' },
+      { nome:'AGRAER / Extensão Rural de MT', papel:`Rede de extensão rural e comunitária em MT para capilarização das ações de "${title}" no interior do estado.`, link:'https://www.empaer.mt.gov.br' },
+      { nome:`Conselho Municipal de ${cidadeS} (saúde, educação, MA)`, papel:`Legitimidade participativa e canal de incidência em políticas públicas locais para os resultados de "${title}".`, link:'' },
+      { nome:'ICV — Instituto Centro de Vida (MT)', papel:`ONG de referência em socioambientalismo, governança territorial e projetos comunitários em MT.`, link:'https://www.icv.org.br' }
     ],
     pes: [
-      { nome:'Edital Universal CNPq', orgao:'CNPq', compatibilidade:`Principal edital para pesquisa básica e aplicada no Brasil. O perfil científico de "${title}" tem forte aderência.` },
-      { nome:'Edital Pesquisa FAPEMAT', orgao:'FAPEMAT', compatibilidade:`Financia pesquisas desenvolvidas em instituições públicas de MT — prioridade para projetos em ${cidade}.` },
-      { nome:'PROEX/PROCAD CAPES', orgao:'CAPES', compatibilidade:`Programas de fomento à pesquisa de pós-graduação e internacionalização, alinhados à área de ${area}.` }
+      { nome:'UFMT — Universidade Federal de Mato Grosso', papel:`Colaboração científica em ${area}: co-autoria, laboratórios, dados e fortalecimento metodológico de "${title}".`, link:'https://www.ufmt.br' },
+      { nome:'INPA — Instituto Nacional de Pesquisas da Amazônia', papel:`Parceria estratégica para biodiversidade, ecossistemas e dinâmica socioambiental em MT.`, link:'https://www.inpa.gov.br' },
+      { nome:'INPE — Instituto Nacional de Pesquisas Espaciais', papel:`Dados de sensoriamento remoto (PRODES, DETER, MapBiomas) e colaboração em ${area} com base em ${cidadeS}.`, link:'https://www.inpe.br' },
+      { nome:'IBGE — Instituto Brasileiro de Geografia e Estatística', papel:`Dados censitários, cartografia e estatísticas territoriais para fundamentar "${title}" em ${cidade}.`, link:'https://www.ibge.gov.br' },
+      { nome:'Embrapa Agrossilvipastoril — Sinop/MT', papel:`Pesquisa aplicada em agropecuária, floresta e sistemas produtivos com base científica sólida em MT.`, link:'https://www.embrapa.br/agrossilvipastoril' },
+      { nome:'Grupos de Pesquisa UNEMAT — Diretório CNPq', papel:`Colaboração interna para co-autoria, infraestrutura e produção científica em ${area}.`, link:'https://dgp.cnpq.br' },
+      { nome:'IIEB — Instituto Internacional de Educação do Brasil', papel:`Pesquisa socioambiental participativa, especialmente em projetos com comunidades florestais de MT.`, link:'https://www.iieb.org.br' },
+      { nome:'FIOCRUZ — Plataforma Itinerante em MT', papel:`Colaboração em saúde coletiva, epidemiologia e pesquisa ambiental com foco em populações de MT.`, link:'https://portal.fiocruz.br' }
     ],
     ino: [
-      { nome:'FINEP Inovação — Subvenção Econômica', orgao:'FINEP/MCTI', compatibilidade:`Maior programa de financiamento à inovação do Brasil. O perfil tecnológico de "${title}" se enquadra nas linhas de inovação aplicada.` },
-      { nome:'BNDES Garagem', orgao:'BNDES', compatibilidade:`Programa de aceleração para soluções inovadoras com potencial de escalonamento — compatível com a abrangência ${escopo} do projeto.` },
-      { nome:'Edital EMBRAPII — Projetos em Rede', orgao:'EMBRAPII', compatibilidade:`Financia inovação em parceria com empresas. Ideal se o projeto tiver potencial de transferência tecnológica para o setor produtivo.` }
+      { nome:'NIT-UNEMAT — Núcleo de Inovação Tecnológica', papel:`Orientação obrigatória sobre PI, patentes e transferência tecnológica para "${title}" antes de publicar resultados.`, link:'https://www.unemat.br/nit' },
+      { nome:'SEBRAE-MT — Serviço Brasileiro de Apoio às MPEs', papel:`Conexão com empresas, aceleração de produtos e acesso ao ecossistema de negócios de MT para "${title}".`, link:'https://www.mt.sebrae.com.br' },
+      { nome:'SENAI-MT — Serviço Nacional de Aprendizagem Industrial', papel:`Prototipagem, testes industriais e validação técnica do produto gerado por "${title}".`, link:'https://www.mt.senai.br' },
+      { nome:'FIEMT — Federação das Indústrias de Mato Grosso', papel:`Articulação com o setor industrial de MT para transferência tecnológica e parceria empresa-universidade.`, link:'https://www.fiemt.com.br' },
+      { nome:'MT Fomento — Agência de Fomento do Estado', papel:`Linhas de crédito e financiamento para inovação e desenvolvimento tecnológico em MT.`, link:'https://www.mtfomento.com.br' },
+      { nome:'SECEL-MT — Secretaria de Ciência, Tecnologia e Inovação', papel:`Articulação estadual para inovação, editais e ecossistema tecnológico de MT.`, link:'https://www.secel.mt.gov.br' },
+      { nome:'IEL-MT / Parque Tecnológico de Cuiabá', papel:`Infraestrutura de incubação, prototipagem e validação do produto tecnológico de "${title}".`, link:'https://www.ielmt.com.br' },
+      { nome:'ANPROTEC — Rede Nacional de Inovação', papel:`Acesso à rede de incubadoras e parques tecnológicos para escalonamento de "${title}" além de MT.`, link:'https://anprotec.org.br' }
     ]
   };
 
-  // Adiciona edital especifico para area
-  const editaisEspecificos = {
-    'saúde': { nome:'PPSUS — Pesquisa para o SUS', orgao:'CNPq/MS/FAPEMAT', compatibilidade:`Programa específico para pesquisa em saúde com impacto no SUS — altamente compatível com a área de ${area}.` },
-    'saude': { nome:'PPSUS — Pesquisa para o SUS', orgao:'CNPq/MS/FAPEMAT', compatibilidade:`Programa específico para pesquisa em saúde com impacto no SUS.` },
-    'educação': { nome:'Observatório da Educação', orgao:'CAPES/INEP', compatibilidade:`Edital específico para pesquisa e extensão em educação básica — compatível com a área de ${area}.` },
-    'educacao': { nome:'Observatório da Educação', orgao:'CAPES/INEP', compatibilidade:`Edital específico para pesquisa e extensão em educação.` },
-    'meio ambiente': { nome:'Fundo Amazônia — BNDES', orgao:'BNDES/MMA', compatibilidade:`Financia projetos de conservação e uso sustentável na Amazônia Legal — abrange o Mato Grosso.` },
-    'ambiental': { nome:'Fundo Amazônia — BNDES', orgao:'BNDES/MMA', compatibilidade:`Fundo voltado a projetos ambientais na Amazônia Legal.` }
-  };
-
-  const areaLower = area.toLowerCase();
-  let editais = [...(editaisBase[first.key] || editaisBase.ext)];
-  for (const [key, edital] of Object.entries(editaisEspecificos)) {
-    if (areaLower.includes(key)) { editais.unshift(edital); editais = editais.slice(0,3); break; }
-  }
-
-  // ---- PARCEIROS (por perfil + localização) ----
-  const parceiros = [];
-  if (first.key === 'ext' || pct.ext > 30) {
-    parceiros.push({ nome:`Prefeitura Municipal de ${info.cidade || 'execução'}`, papel:`Parceria institucional para facilitar acesso às comunidades, ceder espaços e ampliar o alcance das ações comunitárias.` });
-    parceiros.push({ nome:'ONGs e associações locais', papel:`Articulação com organizações já inseridas nas comunidades atendidas para co-execução das atividades.` });
-  }
-  if (first.key === 'pes' || pct.pes > 30) {
-    parceiros.push({ nome:'Grupos de Pesquisa da UNEMAT/UFMT', papel:`Colaboração científica para fortalecimento metodológico, co-autoria e acesso a laboratórios e infraestrutura.` });
-    parceiros.push({ nome:'Radboud University / parceiros internacionais', papel:`Cooperação internacional para validação metodológica, co-autoria e acesso a bases de dados internacionais.` });
-  }
-  if (first.key === 'ino' || pct.ino > 30) {
-    parceiros.push({ nome:'NIT-UNEMAT — Núcleo de Inovação Tecnológica', papel:`Apoio em registro de propriedade intelectual, transferência tecnológica e conexão com empresas parceiras.` });
-    parceiros.push({ nome:'SEBRAE-MT / SENAI-MT', papel:`Parceria para transferência tecnológica, capacitação e acesso ao mercado regional para os produtos gerados.` });
-  }
-  if (parceiros.length < 3) parceiros.push({ nome:'MPMT / Ministério Público Estadual', papel:`Parceria para projetos com impacto em direitos sociais, ambientais ou comunitários — amplia legitimidade e visibilidade.` });
-
-  // ---- RETORNO À SOCIEDADE ----
-  const retornos = [];
-  if (communities.length > 0) retornos.push({ icone:'🤝', beneficio:`Benefício direto para ${communities.slice(0,2).join(' e ')}: acesso a conhecimento, tecnologia e suporte institucional antes indisponível.` });
-  if (devolutiva) retornos.push({ icone:'🎁', beneficio:devolutiva.slice(0,150) + (devolutiva.length > 150 ? '...' : '') });
-  if (products.length > 0) retornos.push({ icone:'📦', beneficio:`Geração de ${products.slice(0,2).join(' e ')}: produto concreto e disponível para uso pela sociedade.` });
-  retornos.push({ icone:'🎓', beneficio:`Formação e qualificação de alunos e comunidades envolvidos, com impacto duradouro na capacidade local de ${info.cidade || 'atuação'}.` });
-  retornos.push({ icone:'📊', beneficio:`Produção de dados e conhecimento sobre a realidade de ${cidade}, que podem subsidiar políticas públicas de abrangência ${escopo}.` });
-
-  // ---- FORTALECER EIXO FRACO ----
-  const fortalecer = {
-    ext: [
-      `Incorpore ao cronograma pelo menos 3 ações presenciais com a comunidade (oficinas, diagnósticos participativos, reuniões) para elevar o componente extensionista.`,
-      `Envolva estudantes de graduação como bolsistas de extensão — isso fortalece o vínculo com a sociedade e cumpre a obrigatoriedade dos 10% de extensão curricular.`,
-      `Documente a "devolutiva" do projeto à comunidade com relatórios fotográficos e depoimentos — isso valoriza o componente de Extensão nos relatórios finais.`
+  const PARC_TEMATICO = {
+    'saúde|saude|epidemio|nutri': [
+      { nome:`Secretaria Municipal de Saúde de ${cidadeS} / UBS`, papel:`Inserção nas redes do SUS para execução e acesso às comunidades atendidas.`, link:'https://www.gov.br/saude' },
+      { nome:'SES-MT — Secretaria de Estado de Saúde', papel:`Parceria estadual para projetos com impacto na rede de saúde pública mato-grossense.`, link:'https://www.saude.mt.gov.br' }
     ],
-    pes: [
-      `Formalize uma pergunta científica central e pelo menos duas hipóteses testáveis para estruturar a dimensão de Pesquisa do projeto.`,
-      `Inclua coleta e análise de dados com método formal (amostragem, instrumento validado, estatística) — mesmo que seja secundário ao objetivo principal.`,
-      `Planeje a publicação de pelo menos um artigo ou relatório técnico a partir dos dados coletados — isso valoriza o componente de Pesquisa junto às agências de fomento.`
+    'educação|educacao|escola|pedagog|letramento': [
+      { nome:`Secretaria de Educação de ${cidadeS} — SEMED`, papel:`Inserção nas escolas, formação de multiplicadores e acesso ao público-alvo de "${title}".`, link:'' },
+      { nome:'SEDUC-MT — Secretaria Estadual de Educação', papel:`Escalonamento das ações de "${title}" em toda a rede escolar de MT.`, link:'https://www.seduc.mt.gov.br' }
     ],
-    ino: [
-      `Identifique um problema prático que o projeto possa resolver com um produto, processo ou metodologia nova — isso eleva o componente de Inovação.`,
-      `Articule-se com empresas ou gestores públicos locais para co-desenvolver soluções — projetos com parceiros privados têm maior pontuação em editais de inovação.`,
-      `Registre no NIT-UNEMAT qualquer metodologia, software ou produto original gerado — mesmo registros simples elevam o perfil inovador do projeto.`
+    'ambiental|ecologia|floresta|biodiversidade|conserva': [
+      { nome:'SEMA-MT — Secretaria de Estado de Meio Ambiente', papel:`Licenciamento, dados ambientais e parceria institucional para "${title}" em MT.`, link:'https://www.sema.mt.gov.br' },
+      { nome:'IBAMA / ICMBio — escritórios regionais de MT', papel:`Acesso a dados, territórios protegidos e legitimidade para pesquisa ambiental em MT.`, link:'https://www.icmbio.gov.br' }
+    ],
+    'pantanal|hidro|água|bacia|wetland|rio': [
+      { nome:'ANA — Agência Nacional de Águas e Saneamento', papel:`Dados hidrológicos, parceria e visibilidade nacional para "${title}" na bacia hidrográfica.`, link:'https://www.gov.br/ana' },
+      { nome:'SINFRA-MT — Secretaria de Infraestrutura', papel:`Dados de saneamento e infraestrutura hídrica para projetos em recursos hídricos em MT.`, link:'https://www.sinfra.mt.gov.br' }
+    ],
+    'agro|rural|agricultur|pecuária|pecuaria|alimento': [
+      { nome:'EMPAER-MT — Empresa Mato-Grossense de Pesquisa Agropecuária', papel:`Assistência técnica rural, dados agrícolas e rede de extensão rural em todo o MT.`, link:'https://www.empaer.mt.gov.br' },
+      { nome:'FAMATO / Sindicatos Rurais de MT', papel:`Acesso a produtores rurais, cooperativas e redes do agronegócio mato-grossense.`, link:'https://www.famato.org.br' }
+    ],
+    'cultura|arte|patrimôn|memória|históri': [
+      { nome:'SECITECI-MT / Secretaria de Cultura de MT', papel:`Apoio institucional, acesso a espaços e articulação com grupos culturais de MT.`, link:'https://www.cultura.mt.gov.br' },
+      { nome:'FCC-MT — Fundação de Cultura e Arte Pantaneira', papel:`Parceria para projetos com dimensão cultural, patrimonial e identitária no Pantanal.`, link:'' }
+    ],
+    'indígena|indigena|quilombo|povo tradicional|ribeirinho': [
+      { nome:'FUNAI — Fundação Nacional dos Povos Indígenas', papel:`Parceria necessária para projetos com territórios ou populações indígenas em MT.`, link:'https://www.funai.gov.br' },
+      { nome:'ISA — Instituto Socioambiental', papel:`Referência em direitos indígenas, etnomapeamento e socioambientalismo no Brasil.`, link:'https://www.socioambiental.org' }
+    ],
+    'software|app|digital|tecnolog|informação|informacao|dados': [
+      { nome:'SECEL-MT / Governo Digital de MT', papel:`Parceria para soluções digitais de interesse público e infraestrutura de TI do estado.`, link:'https://www.secel.mt.gov.br' },
+      { nome:'APL de TI de MT / Startups Regionais', papel:`Ecossistema de tecnologia de MT para co-desenvolvimento e escalonamento da solução.`, link:'https://www.secel.mt.gov.br' }
     ]
   };
+
+  function selectParceiros(first, second, areaL, hash) {
+    const pool1 = PARC_POOL[first] || PARC_POOL.ext;
+    const pool2 = PARC_POOL[second] || [];
+    let selected = [
+      pool1[hash % pool1.length],
+      pool1[(hash + 3) % pool1.length]
+    ];
+    if (pool2.length) selected.push(pool2[(hash + 1) % pool2.length]);
+    // Temático — adiciona até 2 específicos
+    for (const [keys, parcs] of Object.entries(PARC_TEMATICO)) {
+      if (keys.split('|').some(k => areaL.includes(k))) {
+        selected.push(parcs[hash % parcs.length]);
+        if (parcs.length > 1 && selected.length < 5) selected.push(parcs[(hash+1) % parcs.length]);
+        break;
+      }
+    }
+    return [...new Map(selected.map(p=>[p.nome,p])).values()].slice(0,5);
+  }
+
+  // ============================================================
+  // DIMENSÃO 4 — FORTALECER EIXO FRACO (4 variações por combo)
+  // ============================================================
+  const FORT_POOL = {
+    ext_pes: [
+      [`Incorpore coleta sistemática de dados nas ações de "${title}" em ${cidadeS} — mesmo questionários simples geram evidência científica publicável.`,
+       `Formalize uma hipótese sobre o impacto comunitário: isso transforma extensão em pesquisa-ação com resultados mensuráveis.`,
+       `Planeje ao menos um artigo científico descrevendo metodologia e resultados quantitativos das ações em ${area}.`],
+      [`Registre "${title}" no Diretório de Grupos CNPq vinculando-o a linha de pesquisa — abre bolsas de IC e financiamento.`,
+       `Estabeleça parceria com grupo de pesquisa da UNEMAT para co-orientar coleta de dados nas ações comunitárias de "${title}".`,
+       `Use as ações em ${cidadeS} como campo de pesquisa-ação: analise os dados com métodos validados e publique os achados.`],
+      [`Conduza pré e pós-teste nas atividades com a comunidade de ${cidadeS} — gera dado científico com baixo custo.`,
+       `Documente os instrumentos usados (roteiros, questionários, fichas) para garantir replicabilidade — critério científico essencial.`,
+       `Submeta o componente científico de "${title}" a periódico de extensão universitária (Extensão em Foco, Conexão UFRGS).`],
+      [`Crie um protocolo de avaliação de impacto das ações de "${title}" com indicadores pré-definidos e medição ao final do projeto.`,
+       `Vincule o projeto a uma dissertação ou TCC — isso estrutura o componente científico e garante orientação metodológica.`,
+       `Submeta os dados coletados nas ações ao repositório aberto da UNEMAT — isso gera produto científico com custo zero.`]
+    ],
+    ext_ino: [
+      [`Identifique um problema prático recorrente nas ações com ${comStr || cidadeS} que poderia ser resolvido com ferramenta ou app novo.`,
+       `Articule-se com o NIT-UNEMAT para mapear se alguma prática de "${title}" tem potencial de registro como metodologia ou software.`,
+       `Proponha um produto tangível como resultado de "${title}" — guia digital, protocolo, app — que vá além de ${cidadeS}.`],
+      [`Convide estudantes de TI ou Engenharia da UNEMAT para desenvolver solução digital que apoie as ações comunitárias de "${title}".`,
+       `Documente e sistematize a metodologia das ações: um método comunitário bem descrito pode ser registrado no NIT como inovação em processo.`,
+       `Busque edital CNPq de Extensão Tecnológica — financia exatamente a junção de ação comunitária com produto tecnológico.`],
+      [`Use as ações em ${cidadeS} como laboratório vivo para testar uma solução tecnológica em desenvolvimento — feedback real e gratuito.`,
+       `Mapeie ferramentas digitais já existentes que poderiam potencializar "${title}" — adaptar ao contexto local também é inovação.`,
+       `Conecte "${title}" ao SEBRAE-MT para identificar startup ou empresa que possa co-desenvolver solução para a comunidade e o mercado.`],
+      [`Elabore um aplicativo simples de registro e acompanhamento das ações comunitárias de "${title}" — isso já é produto inovador.`,
+       `Proponha ao NIT-UNEMAT um registro de metodologia social inédita desenvolvida em "${title}" — proteção simples e de alto valor institucional.`,
+       `Submeta "${title}" ao edital de Extensão Tecnológica do CNPq — a combinação de ação social com produto técnico é exatamente o foco.`]
+    ],
+    pes_ext: [
+      [`Organize ao menos 2 devolutivas presenciais em ${cidadeS} apresentando resultados de "${title}" em linguagem acessível à comunidade.`,
+       `Transforme os dados de "${title}" em infográfico, cartilha ou vídeo para distribuição às comunidades de ${cidadeS}.`,
+       `Vincule "${title}" ao PIBEX ou CAPES-Extensão para formalizar o componente comunitário e captar bolsas para estudantes.`],
+      [`Conduza pelo menos um diagnóstico participativo em ${cidadeS} complementando os dados quantitativos com perspectiva comunitária.`,
+       `Inclua representantes de ${comStr || cidadeS} como co-pesquisadores — enriquece os dados e fortalece o componente extensionista.`,
+       `Formalize parceria com entidade local de ${cidadeS} para garantir que os resultados de "${title}" sejam efetivamente aplicados.`],
+      [`Elabore plano de comunicação dos resultados de "${title}" além da academia: nota técnica e relatório popular para ${cidadeS}.`,
+       `Transforme o cronograma de coleta em oportunidade de capacitação — envolva comunidade e estudantes como pesquisadores auxiliares.`,
+       `Contabilize as horas de envolvimento comunitário de "${title}" como extensão curricular, submetendo ao sistema da UNEMAT.`],
+      [`Crie um website ou página pública com os resultados de "${title}" — isso é extensão digital e aumenta o impacto social da pesquisa.`,
+       `Promova seminário público em ${cidadeS} com autoridades locais sobre os achados de "${title}" — combina extensão com incidência em políticas.`,
+       `Submeta relatório técnico dos resultados de "${title}" à Prefeitura de ${cidadeS} e ao MPMT — transforma pesquisa em instrumento de gestão pública.`]
+    ],
+    pes_ino: [
+      [`Identifique qual resultado de "${title}" tem maior potencial de produto: protocolo, software, kit diagnóstico ou metodologia.`,
+       `Registre no NIT-UNEMAT qualquer metodologia original de "${title}" — inclusive protocolos de campo ou análise computacional.`,
+       `Submeta concomitantemente ao CNPq Universal (pesquisa) e ao FAPEMAT-Inovação para financiar o componente tecnológico.`],
+      [`Conecte "${title}" a empresa ou cooperativa de ${cidadeS} que possa usar os dados gerados para melhorar seus processos.`,
+       `Transforme o banco de dados de "${title}" em dataset aberto (Zenodo, GBIF) — isso é inovação em dados com alto impacto.`,
+       `Proponha spin-off ou startup acadêmica a partir dos resultados de "${title}" — a UNEMAT tem instrumentos via NIT.`],
+      [`Desenvolva ferramenta de suporte à decisão (dashboard, app, planilha dinâmica) a partir dos dados de "${title}".`,
+       `Publique dados como dataset aberto e desenvolva documentação técnica (manual, protocolo) — dois produtos com um esforço.`,
+       `Prospecte chamada EMBRAPII ou FINEP que financie tanto a etapa científica quanto o desenvolvimento tecnológico de "${title}".`],
+      [`Avalie se os algoritmos ou modelos desenvolvidos em "${title}" podem ser empacotados como software livre com documentação técnica.`,
+       `Estabeleça parceria com empresa de ${cidadeS} para piloto de aplicação dos resultados de "${title}" — co-desenvolvimento com retorno ao setor produtivo.`,
+       `Registre o protocolo metodológico de "${title}" como propriedade intelectual da UNEMAT — simples e estratégico.`]
+    ],
+    ino_ext: [
+      [`Organize workshops de cocriação com ${comStr || cidadeS} para definir os requisitos do produto de "${title}" com base na demanda real.`,
+       `Submeta "${title}" ao CNPq Extensão Tecnológica — financia exatamente produto inovador com impacto comunitário.`,
+       `Após cada ciclo de desenvolvimento, faça sessão de devolutiva com ${comStr || cidadeS} — eleva extensão e melhora o produto.`],
+      [`Inclua ${comStr || cidadeS} no processo de teste de "${title}" como beta testers comunitários — feedback gratuito e legítimo.`,
+       `Formalize bolsistas de extensão para apoiar a implantação do produto de "${title}" nas comunidades de ${cidadeS}.`,
+       `Documente a adoção comunitária do produto como relato de extensão — gera publicação e valoriza o impacto social da inovação.`],
+      [`Crie canal permanente com ${comStr || cidadeS} durante o desenvolvimento de "${title}" — WhatsApp, reuniões ou formulários online.`,
+       `Proponha Acordo de Parceria com entidade comunitária de ${cidadeS} para garantir sustentabilidade do produto de "${title}".`,
+       `Conecte "${title}" a projeto de extensão já em andamento na UNEMAT — multiplica impacto comunitário sem duplicar esforços.`],
+      [`Elabore material educativo sobre o produto de "${title}" em linguagem simples para distribuição às comunidades de ${cidadeS}.`,
+       `Promova dia de campo ou demo day aberto em ${cidadeS} com a comunidade para apresentar o produto de "${title}" — isso é extensão.`,
+       `Inclua no escopo de "${title}" sessão de capacitação da comunidade no uso do produto — extensão integrada ao ciclo de inovação.`]
+    ],
+    ino_pes: [
+      [`Formalize a pergunta científica que motiva o desenvolvimento tecnológico de "${title}" — estrutura pesquisa e abre editais.`,
+       `Documente o processo de desenvolvimento de "${title}" com rigor metodológico — possibilita publicar artigo sobre a metodologia.`,
+       `Submeta resultados de "${title}" a congresso científico em ${area} — validação por pares e visibilidade acadêmica.`],
+      [`Construa protocolo de avaliação de eficácia do produto de "${title}" com métricas mensuráveis — gera dado científico sólido.`,
+       `Vincule o componente tecnológico de "${title}" a dissertação no PPGCA-UNEMAT — estrutura pesquisa e garante financiamento CAPES.`,
+       `Publique algoritmos, código ou metodologia analítica de "${title}" em repositório aberto (GitHub + artigo) — contribuição científica de impacto.`],
+      [`Realize revisão sistemática sobre soluções tecnológicas similares a "${title}" — fundamenta o componente científico e fortalece a patente.`,
+       `Aplique survey, experimento controlado ou estudo de caso para medir o impacto real do produto de "${title}" em ${cidadeS}.`,
+       `Conecte "${title}" a dados públicos (MapBiomas, IBGE, ANA) para construir evidência científica de necessidade e impacto.`],
+      [`Elabore artigo de revisão sobre o estado da arte de soluções em ${area} similares a "${title}" — fortalece o componente científico.`,
+       `Registre cada decisão de design de "${title}" em diário de bordo estruturado — isso gera material para artigo de pesquisa-desenvolvimento.`,
+       `Submeta a FAPEMAT uma proposta vinculando a inovação tecnológica de "${title}" a pergunta de pesquisa específica — obtém financiamento duplo.`]
+    ]
+  };
+
+  function selectFort(first, weak, hash) {
+    const key = `${first}_${weak}`;
+    const pool = FORT_POOL[key];
+    if (pool) return pool[hash % pool.length];
+    const fb = {
+      ext:[`Incorpore ações comunitárias em ${cidadeS} para elevar o componente extensionista de "${title}".`,`Envolva estudantes como bolsistas de extensão.`,`Documente as devolutivas com fotos, depoimentos e relatório.`],
+      pes:[`Formalize pergunta científica central com hipóteses testáveis para "${title}".`,`Inclua coleta com método formal: amostragem, instrumento validado, análise estatística.`,`Planeje publicação em periódico Qualis A ou B em ${area}.`],
+      ino:[`Identifique um problema concreto que "${title}" pode resolver com produto ou processo novo.`,`Articule-se com empresas de ${cidadeS} para co-desenvolver soluções.`,`Registre produto ou metodologia no NIT-UNEMAT.`]
+    };
+    return fb[weak] || fb.ext;
+  }
+
+  // ============================================================
+  // DIMENSÃO 5 — ODS com metas específicas e links
+  // ============================================================
+  const ODS_FULL = {
+    'ODS 1 — Erradicação da Pobreza': {
+      num:'1', cor:'#E5243B', emoji:'🏠',
+      metas:[`Meta 1.2: Reduzir à metade a proporção de homens, mulheres e crianças em situação de pobreza`,`Meta 1.4: Garantir que todos os homens e mulheres tenham direitos iguais aos recursos econômicos`],
+      link:'https://brasil.un.org/pt-br/sdgs/1'
+    },
+    'ODS 2 — Fome Zero e Agricultura Sustentável': {
+      num:'2', cor:'#DDA63A', emoji:'🌾',
+      metas:[`Meta 2.1: Acabar com a fome e garantir acesso à alimentação segura e nutritiva`,`Meta 2.4: Garantir sistemas sustentáveis de produção de alimentos`],
+      link:'https://brasil.un.org/pt-br/sdgs/2'
+    },
+    'ODS 3 — Saúde e Bem-Estar': {
+      num:'3', cor:'#4C9F38', emoji:'❤️',
+      metas:[`Meta 3.3: Acabar com epidemias e combater doenças transmissíveis`,`Meta 3.8: Atingir cobertura universal de saúde e acesso a medicamentos essenciais`],
+      link:'https://brasil.un.org/pt-br/sdgs/3'
+    },
+    'ODS 4 — Educação de Qualidade': {
+      num:'4', cor:'#C5192D', emoji:'📚',
+      metas:[`Meta 4.1: Garantir ensino primário e secundário de qualidade, gratuito e equitativo`,`Meta 4.7: Garantir conhecimentos para promoção do desenvolvimento sustentável`],
+      link:'https://brasil.un.org/pt-br/sdgs/4'
+    },
+    'ODS 5 — Igualdade de Gênero': {
+      num:'5', cor:'#FF3A21', emoji:'♀️',
+      metas:[`Meta 5.1: Acabar com todas as formas de discriminação contra mulheres e meninas`,`Meta 5.5: Garantir participação plena das mulheres na vida pública e política`],
+      link:'https://brasil.un.org/pt-br/sdgs/5'
+    },
+    'ODS 6 — Água Limpa e Saneamento': {
+      num:'6', cor:'#26BDE2', emoji:'💧',
+      metas:[`Meta 6.1: Alcançar acesso universal à água potável segura e acessível`,`Meta 6.6: Proteger e restaurar ecossistemas aquáticos, incluindo rios e aquíferos`],
+      link:'https://brasil.un.org/pt-br/sdgs/6'
+    },
+    'ODS 7 — Energia Limpa e Acessível': {
+      num:'7', cor:'#FCC30B', emoji:'⚡',
+      metas:[`Meta 7.2: Aumentar substancialmente a participação de energias renováveis`,`Meta 7.3: Dobrar a taxa global de melhoria da eficiência energética`],
+      link:'https://brasil.un.org/pt-br/sdgs/7'
+    },
+    'ODS 8 — Trabalho Decente': {
+      num:'8', cor:'#A21942', emoji:'💼',
+      metas:[`Meta 8.5: Alcançar emprego pleno e produtivo e trabalho decente para todos`,`Meta 8.6: Reduzir jovens sem estudo, emprego ou formação`],
+      link:'https://brasil.un.org/pt-br/sdgs/8'
+    },
+    'ODS 9 — Indústria, Inovação e Infraestrutura': {
+      num:'9', cor:'#FD6925', emoji:'🏭',
+      metas:[`Meta 9.5: Fortalecer a pesquisa científica e promover inovação tecnológica`,`Meta 9.b: Apoiar o desenvolvimento tecnológico, pesquisa e inovação nos países em desenvolvimento`],
+      link:'https://brasil.un.org/pt-br/sdgs/9'
+    },
+    'ODS 10 — Redução das Desigualdades': {
+      num:'10', cor:'#DD1367', emoji:'⚖️',
+      metas:[`Meta 10.2: Promover inclusão social, econômica e política de todos`,`Meta 10.3: Garantir igualdade de oportunidades e reduzir desigualdades de resultados`],
+      link:'https://brasil.un.org/pt-br/sdgs/10'
+    },
+    'ODS 11 — Cidades e Comunidades Sustentáveis': {
+      num:'11', cor:'#FD9D24', emoji:'🏙️',
+      metas:[`Meta 11.3: Aumentar a urbanização inclusiva e gestão participativa`,`Meta 11.4: Fortalecer esforços de proteção do patrimônio cultural e natural`],
+      link:'https://brasil.un.org/pt-br/sdgs/11'
+    },
+    'ODS 12 — Consumo e Produção Responsáveis': {
+      num:'12', cor:'#BF8B2E', emoji:'♻️',
+      metas:[`Meta 12.2: Alcançar gestão sustentável e uso eficiente dos recursos naturais`,`Meta 12.8: Garantir que as pessoas tenham informações sobre desenvolvimento sustentável`],
+      link:'https://brasil.un.org/pt-br/sdgs/12'
+    },
+    'ODS 13 — Ação Climática': {
+      num:'13', cor:'#3F7E44', emoji:'🌡️',
+      metas:[`Meta 13.1: Reforçar a resiliência e a capacidade adaptativa a riscos climáticos`,`Meta 13.3: Melhorar a educação e sensibilização sobre mudanças climáticas`],
+      link:'https://brasil.un.org/pt-br/sdgs/13'
+    },
+    'ODS 14 — Vida na Água': {
+      num:'14', cor:'#0A97D9', emoji:'🐟',
+      metas:[`Meta 14.1: Reduzir a poluição marinha e de água doce`,`Meta 14.5: Conservar pelo menos 10% de zonas costeiras e marinhas`],
+      link:'https://brasil.un.org/pt-br/sdgs/14'
+    },
+    'ODS 15 — Vida Terrestre': {
+      num:'15', cor:'#56C02B', emoji:'🌿',
+      metas:[`Meta 15.1: Conservar e restaurar ecossistemas terrestres e de água doce`,`Meta 15.5: Tomar medidas urgentes para reduzir a degradação dos habitats naturais`],
+      link:'https://brasil.un.org/pt-br/sdgs/15'
+    },
+    'ODS 16 — Paz, Justiça e Instituições Eficazes': {
+      num:'16', cor:'#00689D', emoji:'⚖️',
+      metas:[`Meta 16.3: Promover o Estado de direito e garantir acesso igual à justiça`,`Meta 16.7: Garantir tomada de decisão responsiva, inclusiva e participativa`],
+      link:'https://brasil.un.org/pt-br/sdgs/16'
+    },
+    'ODS 17 — Parcerias para os Objetivos': {
+      num:'17', cor:'#19486A', emoji:'🤝',
+      metas:[`Meta 17.6: Melhorar a cooperação Norte-Sul, Sul-Sul e triangular em ciência e tecnologia`,`Meta 17.17: Incentivar parcerias eficazes entre público, privado e sociedade civil`],
+      link:'https://brasil.un.org/pt-br/sdgs/17'
+    }
+  };
+
+  const ODS_MAP = [
+    { keys:['saúde','saude','epidemio','mortalidade','clínic','nutri'], ods:['ODS 3 — Saúde e Bem-Estar','ODS 10 — Redução das Desigualdades','ODS 1 — Erradicação da Pobreza'] },
+    { keys:['educação','educacao','escola','pedagog','letramento','alfabet'], ods:['ODS 4 — Educação de Qualidade','ODS 10 — Redução das Desigualdades','ODS 8 — Trabalho Decente'] },
+    { keys:['pantanal','wetland','várzea','varzea'], ods:['ODS 6 — Água Limpa e Saneamento','ODS 14 — Vida na Água','ODS 15 — Vida Terrestre','ODS 13 — Ação Climática'] },
+    { keys:['hidro','água','bacia','saneamento','rio','lago'], ods:['ODS 6 — Água Limpa e Saneamento','ODS 14 — Vida na Água','ODS 3 — Saúde e Bem-Estar'] },
+    { keys:['ambiental','ecologia','biodiversidade','floresta','conserva'], ods:['ODS 15 — Vida Terrestre','ODS 13 — Ação Climática','ODS 6 — Água Limpa e Saneamento'] },
+    { keys:['clima','mudança','carbono','emissão','emissao','temperatura'], ods:['ODS 13 — Ação Climática','ODS 15 — Vida Terrestre','ODS 7 — Energia Limpa e Acessível'] },
+    { keys:['agro','rural','agricultur','pecuária','pecuaria','alimento','food'], ods:['ODS 2 — Fome Zero e Agricultura Sustentável','ODS 15 — Vida Terrestre','ODS 12 — Consumo e Produção Responsáveis'] },
+    { keys:['software','app','digital','dados','tecnolog','informação','informacao','ia','intelig'], ods:['ODS 9 — Indústria, Inovação e Infraestrutura','ODS 17 — Parcerias para os Objetivos','ODS 8 — Trabalho Decente'] },
+    { keys:['energia','solar','eólica','eolica','renov','biocombust'], ods:['ODS 7 — Energia Limpa e Acessível','ODS 13 — Ação Climática','ODS 9 — Indústria, Inovação e Infraestrutura'] },
+    { keys:['cultura','arte','patrimôn','patrimoni','memória','memori','identidade'], ods:['ODS 11 — Cidades e Comunidades Sustentáveis','ODS 10 — Redução das Desigualdades','ODS 4 — Educação de Qualidade'] },
+    { keys:['gênero','genero','mulher','feminism','lgbtq'], ods:['ODS 5 — Igualdade de Gênero','ODS 10 — Redução das Desigualdades','ODS 3 — Saúde e Bem-Estar'] },
+    { keys:['habitação','habitacao','moradia','urban','planejamento'], ods:['ODS 11 — Cidades e Comunidades Sustentáveis','ODS 1 — Erradicação da Pobreza','ODS 10 — Redução das Desigualdades'] },
+    { keys:['indígena','indigena','quilombo','povos tradicionais','povo tradicional'], ods:['ODS 10 — Redução das Desigualdades','ODS 16 — Paz, Justiça e Instituições Eficazes','ODS 15 — Vida Terrestre'] },
+    { keys:['direito','justiça','justica','legal','legisla'], ods:['ODS 16 — Paz, Justiça e Instituições Eficazes','ODS 10 — Redução das Desigualdades','ODS 1 — Erradicação da Pobreza'] }
+  ];
+
+  let odsAligned = ['ODS 17 — Parcerias para os Objetivos','ODS 11 — Cidades e Comunidades Sustentáveis'];
+  const titleL = title.toLowerCase();
+  for (const entry of ODS_MAP) {
+    if (entry.keys.some(k => areaL.includes(k) || titleL.includes(k))) { odsAligned = entry.ods; break; }
+  }
+  const odsExtra = { ext:'ODS 11 — Cidades e Comunidades Sustentáveis', pes:'ODS 9 — Indústria, Inovação e Infraestrutura', ino:'ODS 9 — Indústria, Inovação e Infraestrutura' };
+  if (odsExtra[first] && !odsAligned.includes(odsExtra[first])) odsAligned.push(odsExtra[first]);
+  if (escopo === 'nacional' || escopo === 'internacional') { if (!odsAligned.includes('ODS 17 — Parcerias para os Objetivos')) odsAligned.push('ODS 17 — Parcerias para os Objetivos'); }
+  odsAligned = [...new Set(odsAligned)].slice(0,4);
+  // Enriquecer com metas
+  const odsData = odsAligned.map(name => ODS_FULL[name] || { num:'?', cor:'#1d4ed8', emoji:'🌍', metas:[], link:'https://brasil.un.org/pt-br/sdgs' });
+
+  // ============================================================
+  // RESUMO EXECUTIVO (rotativo por hash)
+  // ============================================================
+  const intensityLabel = { forte:'protagonismo marcante em', moderado:'perfil sólido em', incipiente:'orientação incipiente para' };
+  const resumoPool = [
+    `O projeto "${title}", na área de ${area}, executado em ${cidade}, apresenta ${intensityLabel[intensity]} ${AN[first]}${isHybrid?` com equilíbrio relevante de ${AN[second]} (${pct[second]}%)`:''}. ${communities.length>0?`A atuação junto a ${comStr} confere relevância social direta.`:''} ${devolutiva?`A devolutiva prevista — "${devolutiva.slice(0,90)}${devolutiva.length>90?'...':''}" — evidencia comprometimento concreto com a sociedade.`:''}`,
+    `"${title}" é um projeto de ${area} com execução em ${cidade} que se destaca por sua ${perfisDesc[first]}${isHybrid?`, articulando-a com ${AN[second]} (${pct[second]}%)`:''}. ${products.length>0?`A produção prevista de ${prodStr} amplia seu alcance e permanência.`:''} ${communities.length>0?`O envolvimento de ${comStr} posiciona o projeto como promotor de desenvolvimento local.`:''}`,
+    `Com ${pct[first]}% de alinhamento ao eixo de ${AN[first]}, "${title}" configura um projeto de ${area} com base territorial em ${cidade}${escopo!=='municipal'?` e abrangência ${escopo}`:''}. ${devolutiva?`Seu compromisso de devolutiva — "${devolutiva.slice(0,90)}${devolutiva.length>90?'...':''}" — o distingue pela responsabilidade com a sociedade.`:''} ${isIntegrated?'O perfil integrado dos três eixos potencializa sua elegibilidade a editais interdisciplinares.':''}`
+  ];
+  const resumo = resumoPool[hash % resumoPool.length];
+
+  // ============================================================
+  // RETORNO À SOCIEDADE (composição permutativa)
+  // ============================================================
+  const retornoPool = [
+    communities.length>0 ? { icone:'🤝', beneficio:`Benefício direto para ${comStr}: acesso a ${area.toLowerCase()} com suporte institucional da UNEMAT em ${cidadeS}.` } : null,
+    devolutiva ? { icone:'🎁', beneficio: devolutiva.slice(0,160)+(devolutiva.length>160?'...':'') } : null,
+    products.length>0 ? { icone:'📦', beneficio:`Geração de ${prodStr}: produto acessível, reutilizável e de impacto duradouro para a sociedade de ${cidadeS}.` } : null,
+    { icone:'🎓', beneficio:`Formação de estudantes e comunidades em ${cidadeS} — impacto duradouro na capacidade local de atuar em ${area}.` },
+    { icone:'📊', beneficio:`Produção de dados e evidências sobre ${area} em ${cidade} — insumo direto para políticas públicas de abrangência ${escopo}.` },
+    { icone:'🌱', beneficio:`Contribuição para ${odsAligned[0]} e ${odsAligned[1]||'ODS 17'}, alinhando o projeto às metas da Agenda 2030 da ONU.` },
+    { icone:'🔬', beneficio:`Geração de conhecimento científico sobre ${area} em ${cidade} — base para futuras pesquisas e intervenções na região.` },
+    { icone:'⚙️', beneficio:`Desenvolvimento de solução tecnológica aplicada a ${area} com potencial de escalonamento para além de ${cidadeS}.` }
+  ].filter(Boolean);
+
+  // Seleção de 4 retornos baseada em perfil dominante
+  let retornos = [];
+  if (communities.length>0) retornos.push(retornoPool[0]);
+  if (devolutiva) retornos.push(retornoPool[1]);
+  if (products.length>0 && retornos.length<2) retornos.push(retornoPool[2]||retornoPool[3]);
+  while (retornos.length < 4) {
+    const r = retornoPool[(retornos.length + hash) % retornoPool.length];
+    if (r && !retornos.includes(r)) retornos.push(r);
+    else retornos.push(retornoPool[retornos.length % retornoPool.length]);
+  }
+  retornos = retornos.filter(Boolean).slice(0,4);
+
+  // ============================================================
+  // MONTAGEM FINAL
+  // ============================================================
+  const perfisDesc = { ext:'forte vocação extensionista e de impacto social direto', pes:'sólida orientação científica e produção de conhecimento', ino:'clara vocação inovadora e desenvolvimento tecnológico' };
 
   return {
     resumo_executivo: resumo,
     plano_de_acao: plano,
-    editais_recomendados: editais,
-    parceiros_sugeridos: parceiros.slice(0, 4),
-    retorno_a_sociedade: retornos.slice(0, 4),
-    como_fortalecer_eixo_fraco: fortalecer[weak.key] || fortalecer.ext
+    editais_recomendados: selectEditais(first, second, weak, areaL, escopo, title, cidadeS),
+    parceiros_sugeridos: selectParceiros(first, second, areaL, hash),
+    retorno_a_sociedade: retornos,
+    como_fortalecer_eixo_fraco: selectFort(first, weak, hash),
+    ods_alinhados: odsAligned,
+    ods_data: odsData
   };
 }
-
 function renderAIParecer(p, weakAxis, axisNames) {
   const content = document.getElementById('ai-content');
   const axisLabel = axisNames[weakAxis.key];
@@ -3434,25 +3861,12 @@ function renderAIParecer(p, weakAxis, axisNames) {
       <div class="ai-block-title">💰 Editais e Financiamentos Compativeis</div>`;
     p.editais_recomendados.forEach(e => {
       html += `<div class="ai-edital-card">
-        <div class="ai-edital-title">${e.nome} <span style="font-size:12px; color:var(--pes); font-weight:600; margin-left:6px;">${e.orgao}</span></div>
+        <div class="ai-edital-title">${e.nome} <span style="font-size:12px;color:var(--pes);font-weight:600;margin-left:6px;">${e.orgao}</span></div>
+        ${e.janela ? `<div style="font-size:11px;color:var(--gray-400);font-weight:600;margin:4px 0 6px;display:flex;align-items:center;gap:4px;">🗓️ ${e.janela}</div>` : ''}
         <div class="ai-edital-desc">${e.compatibilidade}</div>
       </div>`;
     });
     html += `</div>`;
-  }
-
-  // Parceiros
-  if (p.parceiros_sugeridos && p.parceiros_sugeridos.length) {
-    html += `<div class="ai-block">
-      <div class="ai-block-title">🤝 Parceiros Institucionais Sugeridos</div>
-      <div class="ai-parceiro-grid">`;
-    p.parceiros_sugeridos.forEach(par => {
-      html += `<div class="ai-parceiro-card">
-        <div class="ai-parceiro-name">${par.nome}</div>
-        <div class="ai-parceiro-role">${par.papel}</div>
-      </div>`;
-    });
-    html += `</div></div>`;
   }
 
   // Retorno a sociedade
@@ -3476,6 +3890,44 @@ function renderAIParecer(p, weakAxis, axisNames) {
       html += `<div class="ai-fortalecer-item">${dica}</div>`;
     });
     html += `</div>`;
+  }
+
+  // Parceiros com links
+  if (p.parceiros_sugeridos && p.parceiros_sugeridos.length) {
+    html += `<div class="ai-block">
+      <div class="ai-block-title">🤝 Parceiros Institucionais Sugeridos</div>
+      <div class="ai-parceiro-grid">`;
+    p.parceiros_sugeridos.forEach(par => {
+      html += `<div class="ai-parceiro-card">
+        <div class="ai-parceiro-name">${par.link ? `<a href="${par.link}" target="_blank" rel="noopener" style="color:var(--gray-800);text-decoration:none;">${par.nome} ↗</a>` : par.nome}</div>
+        <div class="ai-parceiro-role">${par.papel}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // ODS alinhados com metas e links
+  const odsItems = p.ods_data || [];
+  if (odsItems.length || (p.ods_alinhados && p.ods_alinhados.length)) {
+    html += `<div class="ai-block">
+      <div class="ai-block-title" style="color:#1d4ed8;">🌍 Alinhamento com a Agenda 2030 — ODS</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px;">Este projeto contribui diretamente para as seguintes metas dos Objetivos de Desenvolvimento Sustentável da ONU:</p>
+      <div style="display:grid;gap:12px;">`;
+
+    const items = odsItems.length ? odsItems : (p.ods_alinhados || []).map(n => ({ num:'?', cor:'#1d4ed8', emoji:'🌍', metas:[], link:'https://brasil.un.org/pt-br/sdgs', _name: n }));
+    items.forEach((ods, i) => {
+      const name = p.ods_alinhados ? p.ods_alinhados[i] : ods._name || '';
+      const metasHtml = (ods.metas || []).map(m => `<li style="font-size:12px;color:var(--gray-600);padding-left:16px;position:relative;line-height:1.6;"><span style="position:absolute;left:0;color:${ods.cor};">▸</span>${m}</li>`).join('');
+      html += `<div style="border:1.5px solid ${ods.cor}22;border-left:4px solid ${ods.cor};border-radius:10px;padding:14px 16px;background:${ods.cor}08;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:20px;">${ods.emoji}</span>
+          <strong style="font-size:14px;color:${ods.cor};">${name || 'ODS '+ods.num}</strong>
+          ${ods.link ? `<a href="${ods.link}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:${ods.cor};font-weight:700;text-decoration:none;border:1px solid ${ods.cor}44;padding:3px 8px;border-radius:6px;">Ver metas completas ↗</a>` : ''}
+        </div>
+        ${metasHtml ? `<ul style="list-style:none;display:grid;gap:4px;">${metasHtml}</ul>` : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
   }
 
   html += `</div>`;
