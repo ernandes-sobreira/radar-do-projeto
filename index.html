@@ -3779,6 +3779,7 @@ function buildLocalParecer(a) {
   // ============================================================
   // RESUMO EXECUTIVO (rotativo por hash)
   // ============================================================
+  const perfisDesc = { ext:'forte vocação extensionista e de impacto social direto', pes:'sólida orientação científica e produção de conhecimento', ino:'clara vocação inovadora e desenvolvimento tecnológico' };
   const intensityLabel = { forte:'protagonismo marcante em', moderado:'perfil sólido em', incipiente:'orientação incipiente para' };
   const resumoPool = [
     `O projeto "${title}", na área de ${area}, executado em ${cidade}, apresenta ${intensityLabel[intensity]} ${AN[first]}${isHybrid?` com equilíbrio relevante de ${AN[second]} (${pct[second]}%)`:''}. ${communities.length>0?`A atuação junto a ${comStr} confere relevância social direta.`:''} ${devolutiva?`A devolutiva prevista — "${devolutiva.slice(0,90)}${devolutiva.length>90?'...':''}" — evidencia comprometimento concreto com a sociedade.`:''}`,
@@ -3786,10 +3787,6 @@ function buildLocalParecer(a) {
     `Com ${pct[first]}% de alinhamento ao eixo de ${AN[first]}, "${title}" configura um projeto de ${area} com base territorial em ${cidade}${escopo!=='municipal'?` e abrangência ${escopo}`:''}. ${devolutiva?`Seu compromisso de devolutiva — "${devolutiva.slice(0,90)}${devolutiva.length>90?'...':''}" — o distingue pela responsabilidade com a sociedade.`:''} ${isIntegrated?'O perfil integrado dos três eixos potencializa sua elegibilidade a editais interdisciplinares.':''}`
   ];
   const resumo = resumoPool[hash % resumoPool.length];
-
-  // ============================================================
-  // RETORNO À SOCIEDADE (composição permutativa)
-  // ============================================================
   const retornoPool = [
     communities.length>0 ? { icone:'🤝', beneficio:`Benefício direto para ${comStr}: acesso a ${area.toLowerCase()} com suporte institucional da UNEMAT em ${cidadeS}.` } : null,
     devolutiva ? { icone:'🎁', beneficio: devolutiva.slice(0,160)+(devolutiva.length>160?'...':'') } : null,
@@ -3816,7 +3813,6 @@ function buildLocalParecer(a) {
   // ============================================================
   // MONTAGEM FINAL
   // ============================================================
-  const perfisDesc = { ext:'forte vocação extensionista e de impacto social direto', pes:'sólida orientação científica e produção de conhecimento', ino:'clara vocação inovadora e desenvolvimento tecnológico' };
 
   return {
     resumo_executivo: resumo,
