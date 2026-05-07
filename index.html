@@ -273,6 +273,7 @@ body {
 .btn-primary:hover { opacity: 0.90; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
 .btn-primary:active { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn-locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.3); }
 
 .btn-secondary {
   padding: 12px 22px;
@@ -947,7 +948,7 @@ input[type="range"].slider-dark {
         </label>
       </div>
 
-      <button id="btn-entrar" class="btn-primary" onclick="entrarDireto()" disabled style="opacity:0.5">Entrar e começar</button>
+      <button id="btn-entrar" class="btn-primary btn-locked" onclick="entrarDireto()" style="width:100%">Entrar e começar</button>
       <div id="msg-login-error" class="msg-error"></div>
     </div>
   </div>
@@ -1594,11 +1595,29 @@ window.onload = function() {
 // LGPD
 // =========================================================
 function toggleLoginBtn() {
-  const checked = document.getElementById('consent-check').checked;
+  const checked = document.getElementById('consent-check') && document.getElementById('consent-check').checked;
   const btn = document.getElementById('btn-entrar');
-  btn.disabled = !checked;
-  btn.style.opacity = checked ? '1' : '0.5';
+  if (!btn) return;
+  if (checked) {
+    btn.classList.remove('btn-locked');
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.classList.add('btn-locked');
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  }
 }
+
+// Permitir clicar Enter no campo de email
+document.addEventListener('DOMContentLoaded', function() {
+  const emailInput = document.getElementById('login-email');
+  if (emailInput) {
+    emailInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') entrarDireto();
+    });
+  }
+});
 
 // =========================================================
 // MAP — Leaflet
@@ -1719,22 +1738,25 @@ function updateSliderAppearance(qId, value) {
 // AUTH
 // =========================================================
 function entrarDireto() {
+  const check = document.getElementById('consent-check');
+  if (!check || !check.checked) {
+    showError('msg-login-error', 'Você precisa aceitar os termos para continuar.');
+    return;
+  }
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   if (!email || !email.includes('@') || !email.includes('.')) {
     showError('msg-login-error', 'Por favor, informe um e-mail válido.');
     return;
   }
   const btn = document.getElementById('btn-entrar');
-  btn.disabled = true;
+  btn.classList.add('btn-locked');
   btn.innerHTML = '<span class="spinner"></span> Entrando...';
 
-  // Salvar sessão local e entrar
   localStorage.setItem('radar_user_email', email);
   currentUser = {
     email: email,
     uid: 'u_' + email.replace(/[^a-zA-Z0-9]/g, '_')
   };
-  // Pequeno delay para o spinner aparecer antes de trocar a tela
   setTimeout(() => onUserLoggedIn(currentUser), 300);
 }
 
@@ -1752,7 +1774,13 @@ function logout() {
   showScreen('login');
   document.getElementById('header-user').style.display = 'none';
   const btn = document.getElementById('btn-entrar');
-  if (btn) { btn.disabled = false; btn.innerHTML = 'Entrar'; }
+  if (btn) {
+    btn.innerHTML = 'Entrar e começar';
+    btn.classList.add('btn-locked');
+    btn.style.opacity = '0.5';
+  }
+  const check = document.getElementById('consent-check');
+  if (check) check.checked = false;
 }
 
 // =========================================================
@@ -3234,7 +3262,6 @@ function buildLocalParecer(a) {
     retorno_a_sociedade: retornos.slice(0, 4),
     como_fortalecer_eixo_fraco: fortalecer[weak.key] || fortalecer.ext
   };
-}
 }
 
 function renderAIParecer(p, weakAxis, axisNames) {
